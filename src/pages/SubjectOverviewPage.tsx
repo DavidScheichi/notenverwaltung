@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { AssessmentCreateDrawer } from "../components/grades/AssessmentCreateDrawer";
+import { SubjectMobileList } from "../components/grades/SubjectMobileList";
 import { useToast } from "../components/ui/ToastProvider";
 import { GradeMatrix } from "../components/grades/GradeTable";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -54,6 +55,7 @@ export const SubjectOverviewPage = () => {
   const [showDirectGrades, setShowDirectGrades] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
   const boundaries = useMemo(
     () => resolveGradeBoundaries(matrixQuery.data?.boundaries ?? [], subjectId),
@@ -232,11 +234,36 @@ export const SubjectOverviewPage = () => {
               {subjectQuery.data?.name ?? "Fachübersicht"}
             </h2>
           </div>
-          <button type="button" className="button-primary" onClick={() => setIsDrawerOpen(true)}>
+        </div>
+        <div className="mt-4 space-y-3 lg:hidden">
+          <div className="flex flex-wrap gap-2">
+            <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">
+              {students.length} Schüler
+            </span>
+            <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">
+              {visibleDefinitions.length} Leistungsnachweise
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <input
+              className="field"
+              placeholder="Schüler suchen"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+            />
+            <button
+              type="button"
+              className="button-secondary shrink-0"
+              onClick={() => setIsMobileFilterOpen(true)}
+            >
+              Filter
+            </button>
+          </div>
+          <button type="button" className="button-primary w-full" onClick={() => setIsDrawerOpen(true)}>
             + Leistungsnachweis
           </button>
         </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+        <div className="mt-4 hidden gap-3 md:grid-cols-2 xl:grid-cols-6 lg:grid">
           <input
             className="field"
             placeholder="Schüler suchen"
@@ -297,6 +324,9 @@ export const SubjectOverviewPage = () => {
             />
             Direkte Noten anzeigen
           </label>
+          <button type="button" className="button-primary xl:col-span-1" onClick={() => setIsDrawerOpen(true)}>
+            + Leistungsnachweis
+          </button>
         </div>
         {formError ? <div className="mt-3"><ErrorState message={formError} /></div> : null}
         {deleteError ? <div className="mt-3"><ErrorState message={deleteError} /></div> : null}
@@ -325,51 +355,142 @@ export const SubjectOverviewPage = () => {
             />
           </div>
         ) : (
-          <GradeMatrix
-            classId={derivedClassId}
-            subjectId={subjectId}
-            students={students}
-            definitions={visibleDefinitions}
-            boundaries={boundaries}
-            typeLabel={(typeId) => getTypeMeta(typeId).label}
-            results={results}
-            showDirectGrades={showDirectGrades}
-            onSave={async (payload) => {
-              try {
-                await matrixQuery.upsertResult.mutateAsync(payload);
-              } catch (error) {
-                toast.error(
-                  error instanceof Error ? error.message : "Speichern fehlgeschlagen.",
-                );
-                throw error;
-              }
-            }}
-            onToggleInclude={(definitionId, includeInTotal) =>
-              void matrixQuery.updateDefinition.mutate({
-                id: definitionId,
-                includeInTotal,
-              })
-            }
-            onDeleteDefinition={async (definitionId) => {
-              setDeleteError(null);
-              try {
-                const snapshot = await matrixQuery.deleteDefinition.mutateAsync(definitionId);
-                toast.undoable("Leistungsnachweis gelöscht.", async () => {
-                  await matrixQuery.restoreDeletedDefinition.mutateAsync(snapshot);
-                  toast.success("Leistungsnachweis wurde wiederhergestellt.");
-                });
-              } catch (error) {
-                const message = error instanceof Error
-                  ? error.message
-                  : "Leistungsnachweis konnte nicht gelöscht werden.";
-                toast.error(message);
-                setDeleteError(message);
-                throw error;
-              }
-            }}
-          />
+          <>
+            <div className="lg:hidden p-4">
+              <SubjectMobileList
+                students={students}
+                definitions={visibleDefinitions}
+                boundaries={boundaries}
+                typeLabel={(typeId) => getTypeMeta(typeId).label}
+                results={results}
+                showDirectGrades={showDirectGrades}
+                onSave={async (payload) => {
+                  try {
+                    await matrixQuery.upsertResult.mutateAsync(payload);
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error ? error.message : "Speichern fehlgeschlagen.",
+                    );
+                    throw error;
+                  }
+                }}
+              />
+            </div>
+            <div className="hidden lg:block">
+              <GradeMatrix
+                classId={derivedClassId}
+                subjectId={subjectId}
+                students={students}
+                definitions={visibleDefinitions}
+                boundaries={boundaries}
+                typeLabel={(typeId) => getTypeMeta(typeId).label}
+                results={results}
+                showDirectGrades={showDirectGrades}
+                onSave={async (payload) => {
+                  try {
+                    await matrixQuery.upsertResult.mutateAsync(payload);
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error ? error.message : "Speichern fehlgeschlagen.",
+                    );
+                    throw error;
+                  }
+                }}
+                onToggleInclude={(definitionId, includeInTotal) =>
+                  void matrixQuery.updateDefinition.mutate({
+                    id: definitionId,
+                    includeInTotal,
+                  })
+                }
+                onDeleteDefinition={async (definitionId) => {
+                  setDeleteError(null);
+                  try {
+                    const snapshot = await matrixQuery.deleteDefinition.mutateAsync(definitionId);
+                    toast.undoable("Leistungsnachweis gelöscht.", async () => {
+                      await matrixQuery.restoreDeletedDefinition.mutateAsync(snapshot);
+                      toast.success("Leistungsnachweis wurde wiederhergestellt.");
+                    });
+                  } catch (error) {
+                    const message = error instanceof Error
+                      ? error.message
+                      : "Leistungsnachweis konnte nicht gelöscht werden.";
+                    toast.error(message);
+                    setDeleteError(message);
+                    throw error;
+                  }
+                }}
+              />
+            </div>
+          </>
         )}
       </section>
+      {isMobileFilterOpen ? (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 lg:hidden" onClick={() => setIsMobileFilterOpen(false)}>
+          <div
+            className="absolute bottom-0 left-0 right-0 rounded-t-3xl bg-white p-5 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-lg font-semibold text-slate-900">Filter</h3>
+              <button type="button" className="button-secondary" onClick={() => setIsMobileFilterOpen(false)}>
+                Schließen
+              </button>
+            </div>
+            <div className="mt-5 space-y-3">
+              <select
+                className="field"
+                value={selectedTypeFilter}
+                onChange={(event) => setSelectedTypeFilter(event.target.value)}
+              >
+                <option value="all">Alle Typen</option>
+                {filterTypes.map((type) => (
+                  <option key={type.id} value={type.id}>
+                    {type.name}
+                  </option>
+                ))}
+                <option value="">Sonstiges</option>
+              </select>
+              <select
+                className="field"
+                value={sortMode}
+                onChange={(event) => setSortMode(event.target.value as "name" | "best" | "weakest")}
+              >
+                <option value="name">Nach Name</option>
+                <option value="best">Beste zuerst</option>
+                <option value="weakest">Schwächste zuerst</option>
+              </select>
+              <select
+                className="field"
+                value={statusFilter}
+                onChange={(event) =>
+                  setStatusFilter(event.target.value as "all" | "open" | "makeup_pending" | "excused")
+                }
+              >
+                <option value="all">Alle Status</option>
+                <option value="open">Offen / fehlend</option>
+                <option value="makeup_pending">Nachtrag offen</option>
+                <option value="excused">Entschuldigt</option>
+              </select>
+              <label className="flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-3 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={onlyIncomplete}
+                  onChange={(event) => setOnlyIncomplete(event.target.checked)}
+                />
+                Nur unvollständige
+              </label>
+              <label className="flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-3 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={showDirectGrades}
+                  onChange={(event) => setShowDirectGrades(event.target.checked)}
+                />
+                Direkte Noten anzeigen
+              </label>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <AssessmentCreateDrawer
         isOpen={isDrawerOpen}
         isSaving={matrixQuery.createDefinition.isPending}
