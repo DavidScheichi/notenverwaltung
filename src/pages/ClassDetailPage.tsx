@@ -76,6 +76,7 @@ export const ClassDetailPage = () => {
     note: "",
   });
   const [isFundModalOpen, setIsFundModalOpen] = useState(false);
+  const [fundCreateError, setFundCreateError] = useState<string | null>(null);
 
   const currentTeacherId = classQuery.data?.teacher_id ?? "";
 
@@ -197,7 +198,14 @@ export const ClassDetailPage = () => {
   const handleCreateFundEntry = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const result = classFundEntrySchema.safeParse(fundForm);
-    if (!result.success || !currentTeacherId) {
+    if (!result.success) {
+      setFundCreateError(
+        result.error.issues[0]?.message ?? "Bitte prüfe deine Eingaben.",
+      );
+      return;
+    }
+    if (!currentTeacherId) {
+      setFundCreateError("Klasse konnte nicht ermittelt werden.");
       return;
     }
 
@@ -211,10 +219,14 @@ export const ClassDetailPage = () => {
         note: result.data.note || null,
       });
       setFundForm((prev) => ({ ...prev, amount: "", note: "" }));
+      setFundCreateError(null);
       setIsFundModalOpen(false);
       toast.success("Buchung gespeichert.");
-    } catch {
+    } catch (error) {
       toast.error("Buchung konnte nicht gespeichert werden.");
+      setFundCreateError(
+        error instanceof Error ? error.message : "Buchung konnte nicht gespeichert werden.",
+      );
     }
   };
 
@@ -255,7 +267,7 @@ export const ClassDetailPage = () => {
 
       {tab === "students" ? (
         <>
-          <section className="card-raised overflow-hidden">
+          <section className="card-raised">
             <div className="flex items-center justify-between gap-4 border-b border-line px-5 py-4">
               <div>
                 <h2 className="text-base font-semibold text-ink">Schülerliste</h2>
@@ -379,7 +391,7 @@ export const ClassDetailPage = () => {
       ) : null}
 
       {tab === "subjects" ? (
-        <section className="card-raised overflow-hidden">
+        <section className="card-raised">
           <div className="flex items-center justify-between gap-4 border-b border-line px-5 py-4">
             <div>
               <h2 className="text-base font-semibold text-ink">Fächer</h2>
@@ -466,7 +478,7 @@ export const ClassDetailPage = () => {
       ) : null}
 
       {tab === "fund" ? (
-        <section className="card-raised overflow-hidden">
+        <section className="card-raised">
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-line px-5 py-4">
             <div>
               <h2 className="text-base font-semibold text-ink">Klassenkasse</h2>
@@ -590,7 +602,10 @@ export const ClassDetailPage = () => {
 
       <Modal
         isOpen={isFundModalOpen}
-        onClose={() => setIsFundModalOpen(false)}
+        onClose={() => {
+          setIsFundModalOpen(false);
+          setFundCreateError(null);
+        }}
         title="Buchung erfassen"
         description="Trage eine Ein- oder Auszahlung für die Klassenkasse ein."
         size="sm"
@@ -599,7 +614,10 @@ export const ClassDetailPage = () => {
             <button
               type="button"
               className="btn-secondary"
-              onClick={() => setIsFundModalOpen(false)}
+              onClick={() => {
+                setIsFundModalOpen(false);
+                setFundCreateError(null);
+              }}
             >
               Abbrechen
             </button>
@@ -663,6 +681,7 @@ export const ClassDetailPage = () => {
               }
             />
           </Field>
+          {fundCreateError ? <ErrorState message={fundCreateError} /> : null}
         </form>
       </Modal>
 
