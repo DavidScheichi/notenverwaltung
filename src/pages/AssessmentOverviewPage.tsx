@@ -14,6 +14,13 @@ import {
   resolveGradeBoundaries,
 } from "../lib/subjectOverview";
 
+const LoadingRows = () => (
+  <div className="space-y-3 p-5">
+    <div className="h-14 animate-pulse rounded-xl bg-sunken" />
+    <div className="h-14 animate-pulse rounded-xl bg-sunken" />
+  </div>
+);
+
 export const AssessmentOverviewPage = () => {
   const { classId = "", subjectId = "", assessmentId = "" } = useParams();
   const classQuery = useClassById(classId);
@@ -100,6 +107,8 @@ export const AssessmentOverviewPage = () => {
 
       {matrixQuery.error ? (
         <ErrorState message={matrixQuery.error.message} />
+      ) : matrixQuery.isLoading ? (
+        <LoadingRows />
       ) : !definition ? (
         <EmptyState
           title="Leistungsnachweis nicht gefunden"

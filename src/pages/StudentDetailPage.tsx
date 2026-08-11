@@ -15,6 +15,13 @@ import {
 } from "../lib/subjectOverview";
 import { formatDate } from "../lib/utils";
 
+const LoadingRows = () => (
+  <div className="space-y-3">
+    <div className="h-14 animate-pulse rounded-xl bg-sunken" />
+    <div className="h-14 animate-pulse rounded-xl bg-sunken" />
+  </div>
+);
+
 export const StudentDetailPage = () => {
   const { classId: classIdParam, studentId = "" } = useParams();
   const studentQuery = useStudentById(studentId);
@@ -82,6 +89,8 @@ export const StudentDetailPage = () => {
 
       {assessmentOverviewQuery.error ? (
         <ErrorState message={assessmentOverviewQuery.error.message} />
+      ) : subjectsQuery.isLoading || assessmentOverviewQuery.isLoading ? (
+        <LoadingRows />
       ) : groupedBySubject.length === 0 ? (
         <EmptyState
           title="Noch keine Fächer"
