@@ -1,9 +1,16 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { SubjectFormFields } from "../components/subjects/SubjectFormFields";
+import type { SubjectFormValues } from "../components/subjects/SubjectFormFields";
 import { EmptyState } from "../components/ui/EmptyState";
 import { ErrorState } from "../components/ui/ErrorState";
+import { Field } from "../components/ui/Field";
+import { Menu } from "../components/ui/Menu";
+import { Modal } from "../components/ui/Modal";
+import { PageHeader } from "../components/ui/PageHeader";
 import { useToast } from "../components/ui/ToastProvider";
+import { useConfirm } from "../components/ui/useConfirm";
 import { useClasses } from "../hooks/useClasses";
 import { useAllStudents } from "../hooks/useStudents";
 import { useAllSubjects, useSubjects } from "../hooks/useSubjects";
@@ -13,6 +20,9 @@ import { parsePointsMapping, subjectSchema } from "../schemas/subjects";
 
 export const SubjectsPage = () => {
   const toast = useToast();
+  const { confirm, confirmDialog } = useConfirm();
+  const [search, setSearch] = useState("");
+  const [classFilter, setClassFilter] = useState("");
   const classesQuery = useClasses();
   const studentsQuery = useAllStudents();
   const subjectsQuery = useAllSubjects();
@@ -20,14 +30,14 @@ export const SubjectsPage = () => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [subjectForm, setSubjectForm] = useState({
+  const [subjectForm, setSubjectForm] = useState<SubjectFormValues>({
     class_id: "",
     name: "",
     subject_type: "normal",
     grading_kind: "grade",
     average_mode: "mean",
     default_weight: "1",
-    points_to_grade_raw: '{ "90": 1, "80": 2, "65": 3, "50": 4, "0": 5 }',
+    points_to_grade_raw: '{"90":1,"80":2,"65":3,"50":4,"0":5}',
   });
 
   const subjectIds = useMemo(
@@ -55,191 +65,188 @@ export const SubjectsPage = () => {
   const getClassName = (classId: string) =>
     classesQuery.data?.find((entry) => entry.id === classId)?.name ?? "Keine Klasse";
 
+  const filteredSubjects = useMemo(() => {
+    return (subjectsQuery.data ?? []).filter((subject) => {
+      const matchesSearch = subject.name.toLowerCase().includes(search.toLowerCase());
+      const matchesClass = !classFilter || subject.class_id === classFilter;
+      return matchesSearch && matchesClass;
+    });
+  }, [classFilter, search, subjectsQuery.data]);
+
+  const hasFilters = Boolean(search || classFilter);
+
+  const handleCreateSubject = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setCreateError(null);
+
+    if (!subjectForm.class_id) {
+      setCreateError("Bitte zuerst eine Klasse auswählen.");
+      return;
+    }
+
+    const result = subjectSchema.safeParse({
+      name: subjectForm.name,
+      subject_type: subjectForm.subject_type,
+      grading_kind: subjectForm.grading_kind,
+      average_mode: subjectForm.average_mode,
+      default_weight: subjectForm.default_weight,
+      points_to_grade_raw: subjectForm.points_to_grade_raw,
+    });
+
+    if (!result.success) {
+      setCreateError(result.error.issues[0]?.message ?? "Bitte Eingaben prüfen.");
+      return;
+    }
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        throw new Error("Nicht eingeloggt.");
+      }
+
+      await subjectActions.createSubject.mutateAsync({
+        teacher_id: user.id,
+        class_id: subjectForm.class_id,
+        name: result.data.name,
+        subject_type: result.data.subject_type,
+        grading_kind: result.data.grading_kind,
+        average_mode: result.data.average_mode,
+        default_weight: result.data.default_weight,
+        points_to_grade:
+          result.data.grading_kind === "points"
+            ? parsePointsMapping(result.data.points_to_grade_raw)
+            : null,
+      });
+      toast.success("Fach wurde erstellt.");
+
+      setSubjectForm({
+        class_id: "",
+        name: "",
+        subject_type: "normal",
+        grading_kind: "grade",
+        average_mode: "mean",
+        default_weight: "1",
+        points_to_grade_raw: '{"90":1,"80":2,"65":3,"50":4,"0":5}',
+      });
+      setIsCreateOpen(false);
+    } catch (error) {
+      toast.error("Fach konnte nicht angelegt werden.");
+      setCreateError(
+        error instanceof Error ? error.message : "Fach konnte nicht angelegt werden.",
+      );
+    }
+  };
+
+  const handleDeleteSubject = async (subjectId: string, subjectName: string) => {
+    setDeleteError(null);
+
+    const confirmed = await confirm({
+      title: `„${subjectName}" löschen?`,
+      description:
+        "Alle Leistungsnachweise und eingetragenen Ergebnisse dieses Fachs werden entfernt. Direkt danach kannst du die Aktion über „Rückgängig\" wiederherstellen.",
+      confirmLabel: "Fach löschen",
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const snapshot = await subjectActions.deleteSubject.mutateAsync(subjectId);
+      toast.undoable("Fach gelöscht.", async () => {
+        await subjectActions.restoreDeletedSubject.mutateAsync(snapshot);
+        toast.success("Fach wurde wiederhergestellt.");
+      });
+    } catch (error) {
+      toast.error("Fach konnte nicht gelöscht werden.");
+      setDeleteError(
+        error instanceof Error ? error.message : "Fach konnte nicht gelöscht werden.",
+      );
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      <section className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <p className="text-sm font-medium text-slate-500">Fächerverwaltung</p>
-          <h2 className="text-2xl font-semibold text-slate-900">Fächer</h2>
-        </div>
-        <button
-          type="button"
-          className="button-primary"
-          onClick={() => setIsCreateOpen((value) => !value)}
-        >
-          + Fach hinzufügen
-        </button>
-      </section>
+    <>
+      <PageHeader
+        title="Fächer"
+        description="Alle Fächer über deine Klassen hinweg."
+        stats={[{ label: "Fächer", value: subjectsQuery.data?.length ?? 0 }]}
+        actions={
+          <button type="button" className="btn-primary" onClick={() => setIsCreateOpen(true)}>
+            Neues Fach
+          </button>
+        }
+      />
 
-      {isCreateOpen ? (
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-900">Fach hinzufügen</h3>
-          <p className="mt-1 text-sm text-slate-500">
-            Klasse wählen und das Fach direkt anlegen.
-          </p>
-          <form
-            className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4"
-            onSubmit={async (event) => {
-              event.preventDefault();
-              setCreateError(null);
-
-              if (!subjectForm.class_id) {
-                setCreateError("Bitte zuerst eine Klasse auswählen.");
-                return;
-              }
-
-              const result = subjectSchema.safeParse({
-                name: subjectForm.name,
-                subject_type: subjectForm.subject_type,
-                grading_kind: subjectForm.grading_kind,
-                average_mode: subjectForm.average_mode,
-                default_weight: subjectForm.default_weight,
-                points_to_grade_raw: subjectForm.points_to_grade_raw,
-              });
-
-              if (!result.success) {
-                setCreateError(result.error.issues[0]?.message ?? "Bitte Eingaben prüfen.");
-                return;
-              }
-
-              try {
-                const {
-                  data: { user },
-                } = await supabase.auth.getUser();
-
-                if (!user) {
-                  throw new Error("Nicht eingeloggt.");
-                }
-
-                await subjectActions.createSubject.mutateAsync({
-                  teacher_id: user.id,
-                  class_id: subjectForm.class_id,
-                  name: result.data.name,
-                  subject_type: result.data.subject_type,
-                  grading_kind: result.data.grading_kind,
-                  average_mode: result.data.average_mode,
-                  default_weight: result.data.default_weight,
-                  points_to_grade:
-                    result.data.grading_kind === "points"
-                      ? parsePointsMapping(result.data.points_to_grade_raw)
-                      : null,
-                });
-                toast.success("Fach wurde erstellt.");
-
-                setSubjectForm({
-                  class_id: "",
-                  name: "",
-                  subject_type: "normal",
-                  grading_kind: "grade",
-                  average_mode: "mean",
-                  default_weight: "1",
-                  points_to_grade_raw: '{ "90": 1, "80": 2, "65": 3, "50": 4, "0": 5 }',
-                });
-                setIsCreateOpen(false);
-              } catch (error) {
-                toast.error("Fach konnte nicht angelegt werden.");
-                setCreateError(
-                  error instanceof Error ? error.message : "Fach konnte nicht angelegt werden.",
-                );
-              }
-            }}
-          >
-            <select
+      <section className="card p-4">
+        <div className="grid gap-3 sm:grid-cols-[1fr_220px]">
+          <Field label="Suche" htmlFor="subject-search">
+            <input
+              id="subject-search"
               className="field"
-              value={subjectForm.class_id}
-              onChange={(event) =>
-                setSubjectForm((prev) => ({ ...prev, class_id: event.target.value }))
-              }
+              placeholder="Fachname"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </Field>
+          <Field label="Klasse" htmlFor="subject-class-filter">
+            <select
+              id="subject-class-filter"
+              className="field"
+              value={classFilter}
+              onChange={(event) => setClassFilter(event.target.value)}
             >
-              <option value="">Klasse wählen</option>
+              <option value="">Alle Klassen</option>
               {classesQuery.data?.map((schoolClass) => (
                 <option key={schoolClass.id} value={schoolClass.id}>
                   {schoolClass.name}
                 </option>
               ))}
             </select>
-            <input
-              className="field"
-              placeholder="Fachname"
-              value={subjectForm.name}
-              onChange={(event) =>
-                setSubjectForm((prev) => ({ ...prev, name: event.target.value }))
-              }
-            />
-            <select
-              className="field"
-              value={subjectForm.subject_type}
-              onChange={(event) =>
-                setSubjectForm((prev) => ({ ...prev, subject_type: event.target.value }))
-              }
+          </Field>
+        </div>
+        {hasFilters ? (
+          <div className="mt-3 flex items-center justify-between gap-3 border-t border-line pt-3">
+            <p className="text-[13px] text-ink-3">
+              {filteredSubjects.length} von {subjectsQuery.data?.length ?? 0} Fächern
+            </p>
+            <button
+              type="button"
+              className="btn-ghost btn-sm"
+              onClick={() => {
+                setSearch("");
+                setClassFilter("");
+              }}
             >
-              <option value="normal">Normales Fach</option>
-              <option value="class_fund">Klassenkasse-Fach</option>
-            </select>
-            <button type="submit" className="button-primary" disabled={subjectActions.createSubject.isPending}>
-              {subjectActions.createSubject.isPending ? "Wird gespeichert..." : "Speichern"}
+              Filter zurücksetzen
             </button>
-            <select
-              className="field"
-              value={subjectForm.grading_kind}
-              onChange={(event) =>
-                setSubjectForm((prev) => ({ ...prev, grading_kind: event.target.value }))
-              }
-            >
-              <option value="grade">Direkte Note</option>
-              <option value="points">Punkte mit Mapping</option>
-            </select>
-            <select
-              className="field"
-              value={subjectForm.average_mode}
-              onChange={(event) =>
-                setSubjectForm((prev) => ({ ...prev, average_mode: event.target.value }))
-              }
-            >
-              <option value="mean">Mittelwert</option>
-              <option value="weighted">Gewichteter Durchschnitt</option>
-            </select>
-            <input
-              className="field"
-              type="number"
-              step="0.1"
-              value={subjectForm.default_weight}
-              onChange={(event) =>
-                setSubjectForm((prev) => ({ ...prev, default_weight: event.target.value }))
-              }
-              placeholder="Gewicht"
-            />
-            {subjectForm.grading_kind === "points" ? (
-              <textarea
-                className="field min-h-24 md:col-span-2 xl:col-span-4"
-                value={subjectForm.points_to_grade_raw}
-                onChange={(event) =>
-                  setSubjectForm((prev) => ({
-                    ...prev,
-                    points_to_grade_raw: event.target.value,
-                  }))
-                }
-              />
-            ) : null}
-          </form>
-          {createError ? <div className="mt-3"><ErrorState message={createError} /></div> : null}
-        </section>
-      ) : null}
+          </div>
+        ) : null}
+      </section>
 
-      {subjectsQuery.error ? <ErrorState message={subjectsQuery.error.message} /> : null}
-      {definitionsQuery.error ? <ErrorState message={definitionsQuery.error.message} /> : null}
       {deleteError ? <ErrorState message={deleteError} /> : null}
 
-      {(subjectsQuery.data ?? []).length === 0 ? (
+      {subjectsQuery.error ? (
+        <ErrorState message={subjectsQuery.error.message} />
+      ) : definitionsQuery.error ? (
+        <ErrorState message={definitionsQuery.error.message} />
+      ) : filteredSubjects.length === 0 ? (
         <EmptyState
-          title="Keine Fächer vorhanden"
-          description="Lege das erste Fach an, um Leistungsnachweise und Noten zu verwalten."
-          actionLabel="+ Fach hinzufügen"
-          onAction={() => setIsCreateOpen(true)}
+          title={hasFilters ? "Keine Treffer" : "Noch keine Fächer"}
+          description={
+            hasFilters
+              ? "Passe Suche oder Klassenfilter an."
+              : "Lege das erste Fach an, um Leistungsnachweise und Noten zu verwalten."
+          }
+          actionLabel={hasFilters ? undefined : "Neues Fach"}
+          onAction={hasFilters ? undefined : () => setIsCreateOpen(true)}
         />
       ) : (
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {subjectsQuery.data?.map((subject) => {
+        <section className="grid gap-3 sm:grid-cols-2">
+          {filteredSubjects.map((subject) => {
             const studentCount = (studentsQuery.data ?? []).filter((student) =>
               student.enrollments.some((enrollment) => enrollment.class_id === subject.class_id),
             ).length;
@@ -248,63 +255,103 @@ export const SubjectsPage = () => {
             ).length;
 
             return (
-              <Link
-                key={subject.id}
-                to={`/subjects/${subject.id}`}
-                className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-brand-500 hover:shadow-md"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-lg font-semibold text-brand-700">
-                    {subject.name.slice(0, 1).toUpperCase()}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">
-                      Klasse {getClassName(subject.class_id)}
-                    </span>
-                    <button
-                      type="button"
-                      className="rounded-lg border border-rose-200 px-2 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-50"
-                      onClick={async (event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        setDeleteError(null);
-                        const confirmed = window.confirm(
-                          "Dieses Fach wirklich löschen?\nAlle zugehörigen Leistungsnachweise und Ergebnisse werden entfernt.\nDu kannst die Aktion danach über „Rückgängig“ wiederherstellen.",
-                        );
-                        if (!confirmed) {
-                          return;
-                        }
-
-                        try {
-                          const snapshot = await subjectActions.deleteSubject.mutateAsync(subject.id);
-                          toast.undoable("Fach gelöscht.", async () => {
-                            await subjectActions.restoreDeletedSubject.mutateAsync(snapshot);
-                            toast.success("Fach wurde wiederhergestellt.");
-                          });
-                        } catch (error) {
-                          toast.error("Fach konnte nicht gelöscht werden.");
-                          setDeleteError(
-                            error instanceof Error
-                              ? error.message
-                              : "Fach konnte nicht gelöscht werden.",
-                          );
-                        }
-                      }}
+              <article key={subject.id} className="card-raised group relative p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span
+                      aria-hidden="true"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-base font-bold text-accent-strong"
                     >
-                      Löschen
-                    </button>
+                      {subject.name.slice(0, 1).toUpperCase()}
+                    </span>
+                    <div className="min-w-0">
+                      <Link
+                        to={`/subjects/${subject.id}`}
+                        className="block truncate text-base font-semibold text-ink after:absolute after:inset-0 after:content-[''] hover:text-accent-strong"
+                      >
+                        {subject.name}
+                      </Link>
+                      <p className="mt-0.5 text-[13px] text-ink-3">
+                        Klasse {getClassName(subject.class_id)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="relative z-10 shrink-0">
+                    <Menu
+                      items={[
+                        { kind: "link", label: "Notenübersicht öffnen", to: `/subjects/${subject.id}` },
+                        { kind: "separator" },
+                        {
+                          kind: "action",
+                          label: "Fach löschen",
+                          tone: "danger",
+                          onSelect: () => void handleDeleteSubject(subject.id, subject.name),
+                        },
+                      ]}
+                    />
                   </div>
                 </div>
-                <h3 className="mt-4 text-lg font-semibold text-slate-900">{subject.name}</h3>
-                <div className="mt-4 grid gap-2 text-sm text-slate-500">
-                  <p>{studentCount} Schüler</p>
-                  <p>{assessmentCount} Leistungsnachweise</p>
-                </div>
-              </Link>
+
+                <dl className="mt-4 flex items-center gap-5 border-t border-line pt-3 text-[13px]">
+                  <div className="flex items-baseline gap-1.5">
+                    <dd className="font-semibold tabular-nums text-ink">{studentCount}</dd>
+                    <dt className="text-ink-3">Schüler</dt>
+                  </div>
+                  <div className="flex items-baseline gap-1.5">
+                    <dd className="font-semibold tabular-nums text-ink">{assessmentCount}</dd>
+                    <dt className="text-ink-3">Leistungsnachweise</dt>
+                  </div>
+                </dl>
+              </article>
             );
           })}
         </section>
       )}
-    </div>
+
+      <Modal
+        isOpen={isCreateOpen}
+        onClose={() => {
+          setIsCreateOpen(false);
+          setCreateError(null);
+        }}
+        title="Neues Fach anlegen"
+        description="Lege fest, wie in diesem Fach bewertet wird."
+        size="md"
+        footer={
+          <>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => {
+                setIsCreateOpen(false);
+                setCreateError(null);
+              }}
+            >
+              Abbrechen
+            </button>
+            <button
+              type="submit"
+              form="subject-create-form"
+              className="btn-primary"
+              disabled={subjectActions.createSubject.isPending}
+            >
+              {subjectActions.createSubject.isPending ? "Wird gespeichert..." : "Fach anlegen"}
+            </button>
+          </>
+        }
+      >
+        <form id="subject-create-form" className="space-y-6" onSubmit={handleCreateSubject}>
+          <SubjectFormFields
+            values={subjectForm}
+            onChange={setSubjectForm}
+            classes={classesQuery.data ?? []}
+            idPrefix="subjects-page"
+          />
+          {createError ? <ErrorState message={createError} /> : null}
+        </form>
+      </Modal>
+
+      {confirmDialog}
+    </>
   );
 };
