@@ -3,6 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { EmptyState } from "../components/ui/EmptyState";
 import { ErrorState } from "../components/ui/ErrorState";
+import { Field } from "../components/ui/Field";
+import { GradeBadge } from "../components/ui/GradeBadge";
+import { Modal } from "../components/ui/Modal";
+import { PageHeader } from "../components/ui/PageHeader";
+import { useToast } from "../components/ui/ToastProvider";
 import { useClasses } from "../hooks/useClasses";
 import { useAllStudents } from "../hooks/useStudents";
 import { useAllSubjects } from "../hooks/useSubjects";
@@ -11,9 +16,10 @@ import { formatDate } from "../lib/utils";
 import type { AssessmentDefinition, AssessmentResult } from "../lib/supabase/types";
 import { classSchema } from "../schemas/classes";
 
-const SkeletonCard = () => <div className="h-24 animate-pulse rounded-2xl bg-slate-100" />;
+const SkeletonRow = () => <div className="h-16 animate-pulse rounded-xl bg-sunken" />;
 
 export const DashboardPage = () => {
+  const toast = useToast();
   const navigate = useNavigate();
   const { data: classes, isLoading: classesLoading, error: classesError, createClass } = useClasses();
   const { data: students, isLoading: studentsLoading, error: studentsError } = useAllStudents();
@@ -135,6 +141,7 @@ export const DashboardPage = () => {
 
     try {
       await createClass.mutateAsync(parsed.data.name);
+      toast.success("Klasse wurde angelegt.");
       setNewName("");
       setIsCreateOpen(false);
     } catch (error) {
@@ -146,184 +153,186 @@ export const DashboardPage = () => {
 
   const anyError = classesError || studentsError || subjectsError || resultsMetaQuery.error || recentDefinitionsQuery.error;
 
-  return (
-    <div className="space-y-8">
-      <section className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Dashboard</h1>
-          <p className="mt-2 text-sm text-slate-500">Übersicht über Ihre Klassen und Noten</p>
-        </div>
-        <button type="button" className="button-primary" onClick={() => setIsCreateOpen((value) => !value)}>
-          + Neue Klasse
-        </button>
-      </section>
+  const classesSectionError = classesError;
+  const recentSectionError = resultsMetaQuery.error || recentDefinitionsQuery.error;
 
-      {isCreateOpen ? (
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">Neue Klasse anlegen</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Lege eine neue Klasse an und öffne sie danach direkt aus der Übersicht.
-              </p>
-            </div>
-          </div>
-          <form className="mt-5 grid gap-3 md:grid-cols-[1fr_auto]" onSubmit={handleCreate}>
-            <input
-              className="field"
-              value={newName}
-              onChange={(event) => setNewName(event.target.value)}
-              placeholder="z. B. 10A"
-            />
-            <button type="submit" className="button-primary" disabled={createClass.isPending}>
-              {createClass.isPending ? "Wird gespeichert..." : "Klasse speichern"}
-            </button>
-          </form>
-          {formError ? <div className="mt-3"><ErrorState message={formError} /></div> : null}
-        </section>
-      ) : null}
+  return (
+    <>
+      <PageHeader
+        title="Übersicht"
+        description="Deine Klassen und die zuletzt eingetragenen Noten auf einen Blick."
+        stats={
+          classesLoading || studentsLoading || subjectsLoading || resultsMetaQuery.isLoading
+            ? undefined
+            : [
+                { label: "Klassen", value: classes?.length ?? 0 },
+                { label: "Schüler", value: students?.length ?? 0 },
+                { label: "Fächer", value: subjects?.length ?? 0 },
+                { label: "Noten eingetragen", value: resultsMetaQuery.data?.totalCount ?? 0 },
+              ]
+        }
+        actions={
+          <button type="button" className="btn-primary" onClick={() => setIsCreateOpen(true)}>
+            Neue Klasse
+          </button>
+        }
+      />
 
       {anyError ? <ErrorState message={anyError.message} /> : null}
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {classesLoading || studentsLoading || subjectsLoading || resultsMetaQuery.isLoading ? (
-          <>
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </>
+      <section className="card-raised overflow-hidden">
+        <div className="flex items-center justify-between gap-4 border-b border-line px-5 py-4">
+          <div>
+            <h2 className="text-base font-semibold text-ink">Klassen</h2>
+            <p className="mt-0.5 text-[13px] text-ink-3">Öffne eine Klasse, um Schüler und Fächer zu bearbeiten.</p>
+          </div>
+          <Link to="/classes" className="btn-ghost btn-sm">
+            Alle ansehen
+          </Link>
+        </div>
+
+        {classesSectionError ? (
+          <div className="p-5">
+            <ErrorState message={classesSectionError.message} />
+          </div>
+        ) : classesLoading ? (
+          <div className="space-y-3 p-5">
+            <SkeletonRow />
+            <SkeletonRow />
+          </div>
+        ) : !classes || classes.length === 0 ? (
+          <div className="p-5">
+            <EmptyState
+              title="Noch keine Klassen"
+              description="Lege deine erste Klasse an, um mit der Notenverwaltung zu starten."
+              actionLabel="Neue Klasse"
+              onAction={() => setIsCreateOpen(true)}
+            />
+          </div>
         ) : (
-          <>
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm font-medium text-slate-500">Schüler gesamt</p>
-              <p className="mt-3 text-3xl font-semibold text-slate-900">{students?.length ?? 0}</p>
-            </div>
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm font-medium text-slate-500">Fächer</p>
-              <p className="mt-3 text-3xl font-semibold text-slate-900">{subjects?.length ?? 0}</p>
-            </div>
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm font-medium text-slate-500">Noten eingetragen</p>
-              <p className="mt-3 text-3xl font-semibold text-slate-900">
-                {resultsMetaQuery.data?.totalCount ?? 0}
-              </p>
-            </div>
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm font-medium text-slate-500">Klassen</p>
-              <p className="mt-3 text-3xl font-semibold text-slate-900">{classes?.length ?? 0}</p>
-            </div>
-          </>
+          <div className="divide-y divide-line">
+            {classes.map((schoolClass) => (
+              <Link
+                key={schoolClass.id}
+                to={`/classes/${schoolClass.id}`}
+                className="row-hover flex items-center justify-between gap-4 px-5 py-4"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-base font-semibold text-ink">{schoolClass.name}</p>
+                  <p className="mt-0.5 text-[13px] text-ink-3">
+                    {classStats.studentCounts.get(schoolClass.id) ?? 0} Schüler ·{" "}
+                    {classStats.subjectCounts.get(schoolClass.id) ?? 0} Fächer
+                  </p>
+                </div>
+                <span aria-hidden="true" className="shrink-0 text-ink-3">
+                  ›
+                </span>
+              </Link>
+            ))}
+          </div>
         )}
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.35fr_1fr]">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">Klassenübersicht</h2>
-              <p className="mt-1 text-sm text-slate-500">Alle Klassen mit den wichtigsten Kennzahlen</p>
-            </div>
-            <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">
-              {classes?.length ?? 0} Klassen
-            </span>
-          </div>
-
-          {classesLoading ? (
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <SkeletonCard />
-              <SkeletonCard />
-            </div>
-          ) : !classes || classes.length === 0 ? (
-            <div className="mt-5">
-              <EmptyState
-                title="Noch keine Klassen"
-                description="Lege deine erste Klasse direkt über den Button oben an."
-                actionLabel="+ Neue Klasse"
-                onAction={() => setIsCreateOpen(true)}
-              />
-            </div>
-          ) : (
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              {classes.map((schoolClass) => (
-                <article
-                  key={schoolClass.id}
-                  className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-500 hover:shadow-md"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-lg font-semibold text-slate-900">{schoolClass.name}</p>
-                      <p className="mt-1 text-sm text-slate-500">Klasse</p>
-                    </div>
-                    <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">
-                      {classStats.studentCounts.get(schoolClass.id) ?? 0} Schüler
-                    </span>
-                  </div>
-                  <div className="mt-4 flex items-center justify-between text-sm text-slate-500">
-                    <span>{classStats.subjectCounts.get(schoolClass.id) ?? 0} Fächer</span>
-                    <Link to={`/classes/${schoolClass.id}`} className="button-secondary">
-                      Öffnen
-                    </Link>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
+      <section className="card-raised overflow-hidden">
+        <div className="border-b border-line px-5 py-4">
+          <h2 className="text-base font-semibold text-ink">Zuletzt eingetragen</h2>
+          <p className="mt-0.5 text-[13px] text-ink-3">Die acht zuletzt aktualisierten Ergebnisse.</p>
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">Kürzlich eingetragene Noten</h2>
-              <p className="mt-1 text-sm text-slate-500">Die zuletzt aktualisierten Einträge</p>
-            </div>
+        {recentSectionError ? (
+          <div className="p-5">
+            <ErrorState message={recentSectionError.message} />
           </div>
-
-          {resultsMetaQuery.isLoading || recentDefinitionsQuery.isLoading ? (
-            <div className="mt-5 grid gap-3">
-              <div className="h-20 animate-pulse rounded-2xl bg-slate-100" />
-              <div className="h-20 animate-pulse rounded-2xl bg-slate-100" />
-              <div className="h-20 animate-pulse rounded-2xl bg-slate-100" />
-            </div>
-          ) : recentItems.length === 0 ? (
-            <div className="mt-5">
-              <EmptyState
-                title="Noch keine Einträge"
-                description="Sobald Leistungsnachweise bewertet wurden, erscheinen sie hier."
-                actionLabel="Zu den Fächern"
-                onAction={() => navigate("/subjects")}
-              />
-            </div>
-          ) : (
-            <div className="mt-5 grid gap-3">
-              {recentItems.map(({ result, definition, student, subject }) => (
-                <Link
-                  key={result.id}
-                  to={student ? `/students/${student.id}` : "/students"}
-                  className="rounded-2xl border border-slate-200 p-4 transition hover:border-brand-500 hover:bg-slate-50"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-slate-900">
-                        {student ? `${student.first_name} ${student.last_name}` : "Unbekannter Schüler"}
-                      </p>
-                      <p className="mt-1 text-sm text-slate-500">
-                        {subject?.name ?? "Unbekanntes Fach"} · {definition?.name ?? "Leistungsnachweis"}
-                      </p>
-                    </div>
-                    <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">
-                      {result.points !== null ? result.points : result.grade ?? "-"}
-                    </span>
-                  </div>
-                  <p className="mt-3 text-xs font-medium uppercase tracking-[0.12em] text-slate-400">
-                    Aktualisiert {formatDate(result.updated_at)}
+        ) : resultsMetaQuery.isLoading || recentDefinitionsQuery.isLoading ? (
+          <div className="space-y-3 p-5">
+            <SkeletonRow />
+            <SkeletonRow />
+            <SkeletonRow />
+          </div>
+        ) : recentItems.length === 0 ? (
+          <div className="p-5">
+            <EmptyState
+              title="Noch keine Einträge"
+              description="Sobald du Leistungsnachweise bewertest, erscheinen sie hier."
+              actionLabel="Zu den Fächern"
+              onAction={() => navigate("/subjects")}
+            />
+          </div>
+        ) : (
+          <div className="divide-y divide-line">
+            {recentItems.map(({ result, definition, student, subject }) => (
+              <Link
+                key={result.id}
+                to={student ? `/students/${student.id}` : "/students"}
+                className="row-hover flex items-center justify-between gap-4 px-5 py-3.5"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-ink">
+                    {student ? `${student.first_name} ${student.last_name}` : "Unbekannter Schüler"}
                   </p>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
+                  <p className="mt-0.5 truncate text-[13px] text-ink-3">
+                    {subject?.name ?? "Unbekanntes Fach"} · {definition?.name ?? "Leistungsnachweis"} ·{" "}
+                    {formatDate(result.updated_at)}
+                  </p>
+                </div>
+                {result.grade !== null ? (
+                  <GradeBadge grade={result.grade} />
+                ) : (
+                  <span className="badge-neutral tabular-nums">
+                    {result.points !== null ? `${result.points} P` : "—"}
+                  </span>
+                )}
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
-    </div>
+
+      <Modal
+        isOpen={isCreateOpen}
+        onClose={() => {
+          setIsCreateOpen(false);
+          setFormError(null);
+        }}
+        title="Neue Klasse anlegen"
+        description="Der Name erscheint überall dort, wo du die Klasse auswählst."
+        size="sm"
+        footer={
+          <>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => {
+                setIsCreateOpen(false);
+                setFormError(null);
+              }}
+            >
+              Abbrechen
+            </button>
+            <button
+              type="submit"
+              form="dashboard-class-form"
+              className="btn-primary"
+              disabled={createClass.isPending}
+            >
+              {createClass.isPending ? "Wird gespeichert..." : "Klasse anlegen"}
+            </button>
+          </>
+        }
+      >
+        <form id="dashboard-class-form" className="space-y-4" onSubmit={handleCreate}>
+          <Field label="Klassenname" htmlFor="dashboard-class-name" hint="Zum Beispiel 4B oder 2AHIF.">
+            <input
+              id="dashboard-class-name"
+              className={formError ? "field field-error" : "field"}
+              value={newName}
+              onChange={(event) => setNewName(event.target.value)}
+              placeholder="4B"
+            />
+          </Field>
+          {formError ? <ErrorState message={formError} /> : null}
+        </form>
+      </Modal>
+    </>
   );
 };
