@@ -178,7 +178,7 @@ export const GradeMatrix = ({
         </div>
       ) : null}
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto min-h-[24rem]">
         <table className="min-w-full border-separate border-spacing-0 text-sm">
           <thead className="sticky top-0 z-20 bg-surface">
             {hasGroupedHeader ? (
