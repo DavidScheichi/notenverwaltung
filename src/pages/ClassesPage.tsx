@@ -76,9 +76,9 @@ export const ClassesPage = () => {
         }
       />
 
-      {error ? <ErrorState message={error.message} /> : null}
-
-      {isLoading ? (
+      {error ? (
+        <ErrorState message={error.message} />
+      ) : isLoading ? (
         <div className="space-y-3">
           <div className="h-16 animate-pulse rounded-xl bg-sunken" />
           <div className="h-16 animate-pulse rounded-xl bg-sunken" />

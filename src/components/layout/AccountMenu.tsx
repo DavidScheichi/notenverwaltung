@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
+import { useToast } from "../ui/ToastProvider";
 
 export const AccountMenu = ({ email }: { email: string }) => {
   const { signOut } = useAuth();
+  const toast = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -67,9 +69,13 @@ export const AccountMenu = ({ email }: { email: string }) => {
             type="button"
             role="menuitem"
             className="block w-full px-4 py-3 text-left text-sm font-medium text-rose-700 transition hover:bg-rose-50"
-            onClick={() => {
+            onClick={async () => {
               setIsOpen(false);
-              void signOut();
+              try {
+                await signOut();
+              } catch {
+                toast.error("Abmelden fehlgeschlagen. Bitte versuche es erneut.");
+              }
             }}
           >
             Abmelden
