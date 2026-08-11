@@ -1,11 +1,15 @@
 import { useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { AssessmentCreateDrawer } from "../components/grades/AssessmentCreateDrawer";
 import { SubjectMobileList } from "../components/grades/SubjectMobileList";
 import { useToast } from "../components/ui/ToastProvider";
 import { GradeMatrix } from "../components/grades/GradeTable";
 import { EmptyState } from "../components/ui/EmptyState";
 import { ErrorState } from "../components/ui/ErrorState";
+import { Field } from "../components/ui/Field";
+import { Modal } from "../components/ui/Modal";
+import { PageHeader } from "../components/ui/PageHeader";
+import { StatusLegend } from "../components/ui/StatusLegend";
 import { useSubjectAssessmentData } from "../hooks/useAssessmentDefinitions";
 import { useClassById } from "../hooks/useClasses";
 import { useStudents } from "../hooks/useStudents";
@@ -218,124 +222,164 @@ export const SubjectOverviewPage = () => {
     .map((label) => assessmentTypes.find((entry) => entry.name === label))
     .filter((entry): entry is AssessmentType => Boolean(entry));
 
+  const activeFilterCount =
+    (searchTerm ? 1 : 0) +
+    (selectedTypeFilter === "all" ? 0 : 1) +
+    (sortMode === "name" ? 0 : 1) +
+    (statusFilter === "all" ? 0 : 1) +
+    (onlyIncomplete ? 1 : 0) +
+    (showDirectGrades ? 0 : 1);
+
+  const resetFilters = () => {
+    setSearchTerm("");
+    setSelectedTypeFilter("all");
+    setSortMode("name");
+    setStatusFilter("all");
+    setOnlyIncomplete(false);
+    setShowDirectGrades(true);
+  };
+
   return (
     <div className="space-y-6">
-      <section className="panel">
-        <Link
-          to={classIdParam ? `/classes/${derivedClassId}` : "/subjects"}
-          className="text-sm font-medium text-brand-700"
-        >
-          ← {classIdParam ? "Zurück zur Klasse" : "Zurück zu den Fächern"}
-        </Link>
-        <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-sm text-slate-500">{classQuery.data?.name ?? "Klasse"}</p>
-            <h2 className="text-2xl font-semibold text-slate-900">
-              {subjectQuery.data?.name ?? "Fachübersicht"}
-            </h2>
-          </div>
-        </div>
-        <div className="mt-4 space-y-3 lg:hidden">
-          <div className="flex flex-wrap gap-2">
-            <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">
-              {students.length} Schüler
-            </span>
-            <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">
-              {visibleDefinitions.length} Leistungsnachweise
-            </span>
-          </div>
-          <div className="flex gap-2">
-            <input
-              className="field"
-              placeholder="Schüler suchen"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-            />
-            <button
-              type="button"
-              className="button-secondary shrink-0"
-              onClick={() => setIsMobileFilterOpen(true)}
-            >
-              Filter
-            </button>
-          </div>
-          <button type="button" className="button-primary w-full" onClick={() => setIsDrawerOpen(true)}>
-            + Leistungsnachweis
+      <PageHeader
+        breadcrumbs={
+          classIdParam
+            ? [
+                { label: "Klassen", to: "/classes" },
+                { label: classQuery.data?.name ?? "Klasse", to: `/classes/${derivedClassId}` },
+                { label: subjectQuery.data?.name ?? "Fach" },
+              ]
+            : [
+                { label: "Fächer", to: "/subjects" },
+                { label: subjectQuery.data?.name ?? "Fach" },
+              ]
+        }
+        eyebrow={classQuery.data?.name ?? "Klasse"}
+        title={subjectQuery.data?.name ?? "Fachübersicht"}
+        stats={[
+          { label: "Schüler", value: students.length },
+          { label: "Leistungsnachweise", value: visibleDefinitions.length },
+        ]}
+        actions={
+          <button type="button" className="btn-primary" onClick={() => setIsDrawerOpen(true)}>
+            Leistungsnachweis anlegen
           </button>
-        </div>
-        <div className="mt-4 hidden gap-3 md:grid-cols-2 xl:grid-cols-6 lg:grid">
+        }
+      />
+
+      {/* Filter — mobil kompakt, ab lg vollständig */}
+      <section className="card p-4">
+        <div className="flex gap-2 lg:hidden">
           <input
             className="field"
             placeholder="Schüler suchen"
+            aria-label="Schüler suchen"
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
           />
-          <select
-            className="field"
-            value={selectedTypeFilter}
-            onChange={(event) => setSelectedTypeFilter(event.target.value)}
+          <button
+            type="button"
+            className="btn-secondary shrink-0"
+            onClick={() => setIsMobileFilterOpen(true)}
           >
-            <option value="all">Alle</option>
-            {filterTypes.map((type) => (
-              <option key={type.id} value={type.id}>
-                {type.name}
-              </option>
-            ))}
-            <option value="">Sonstiges</option>
-          </select>
-          <select
-            className="field"
-            value={sortMode}
-            onChange={(event) =>
-              setSortMode(event.target.value as "name" | "best" | "weakest")
-            }
-          >
-            <option value="name">Name</option>
-            <option value="best">Beste zuerst</option>
-            <option value="weakest">Schwächste zuerst</option>
-          </select>
-          <label className="flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-700">
-            <input
-              type="checkbox"
-              checked={onlyIncomplete}
-              onChange={(event) => setOnlyIncomplete(event.target.checked)}
-            />
-            Nur unvollständige
-          </label>
-          <select
-            className="field"
-            value={statusFilter}
-            onChange={(event) =>
-              setStatusFilter(
-                event.target.value as "all" | "open" | "makeup_pending" | "excused",
-              )
-            }
-          >
-            <option value="all">Status: Alle</option>
-            <option value="open">Status: Offen/Fehlend</option>
-            <option value="makeup_pending">Status: Nachtrag offen</option>
-            <option value="excused">Status: Entschuldigt</option>
-          </select>
-          <label className="flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-700">
-            <input
-              type="checkbox"
-              checked={showDirectGrades}
-              onChange={(event) => setShowDirectGrades(event.target.checked)}
-            />
-            Direkte Noten anzeigen
-          </label>
-          <button type="button" className="button-primary xl:col-span-1" onClick={() => setIsDrawerOpen(true)}>
-            + Leistungsnachweis
+            Filter
+            {activeFilterCount > 0 ? (
+              <span className="badge-accent ml-1">{activeFilterCount}</span>
+            ) : null}
           </button>
         </div>
-        {formError ? <div className="mt-3"><ErrorState message={formError} /></div> : null}
-        {deleteError ? <div className="mt-3"><ErrorState message={deleteError} /></div> : null}
-        {matrixQuery.error ? (
-          <div className="mt-3">
-            <ErrorState message={matrixQuery.error.message} />
+
+        <div className="hidden lg:block">
+          <div className="grid gap-3 lg:grid-cols-4">
+            <Field label="Schüler suchen" htmlFor="overview-search">
+              <input
+                id="overview-search"
+                className="field"
+                placeholder="Name"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+              />
+            </Field>
+            <Field label="Art des Nachweises" htmlFor="overview-type">
+              <select
+                id="overview-type"
+                className="field"
+                value={selectedTypeFilter}
+                onChange={(event) => setSelectedTypeFilter(event.target.value)}
+              >
+                <option value="all">Alle Arten</option>
+                {filterTypes.map((type) => (
+                  <option key={type.id} value={type.id}>
+                    {type.name}
+                  </option>
+                ))}
+                <option value="">Sonstiges</option>
+              </select>
+            </Field>
+            <Field label="Sortierung" htmlFor="overview-sort">
+              <select
+                id="overview-sort"
+                className="field"
+                value={sortMode}
+                onChange={(event) => setSortMode(event.target.value as "name" | "best" | "weakest")}
+              >
+                <option value="name">Nach Name</option>
+                <option value="best">Beste zuerst</option>
+                <option value="weakest">Schwächste zuerst</option>
+              </select>
+            </Field>
+            <Field label="Status" htmlFor="overview-status">
+              <select
+                id="overview-status"
+                className="field"
+                value={statusFilter}
+                onChange={(event) =>
+                  setStatusFilter(
+                    event.target.value as "all" | "open" | "makeup_pending" | "excused",
+                  )
+                }
+              >
+                <option value="all">Alle Status</option>
+                <option value="open">Offen oder fehlend</option>
+                <option value="makeup_pending">Nachtrag offen</option>
+                <option value="excused">Entschuldigt</option>
+              </select>
+            </Field>
           </div>
-        ) : null}
+
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
+            <button
+              type="button"
+              aria-pressed={onlyIncomplete}
+              className={onlyIncomplete ? "chip chip-active" : "chip"}
+              onClick={() => setOnlyIncomplete((value) => !value)}
+            >
+              Nur unvollständige
+            </button>
+            <button
+              type="button"
+              aria-pressed={showDirectGrades}
+              className={showDirectGrades ? "chip chip-active" : "chip"}
+              onClick={() => setShowDirectGrades((value) => !value)}
+            >
+              Direkte Noten anzeigen
+            </button>
+
+            <span className="ml-auto text-[13px] text-ink-3">
+              {students.length} von {studentsQuery.data?.length ?? 0} Schülern
+            </span>
+            {activeFilterCount > 0 ? (
+              <button type="button" className="btn-ghost btn-sm" onClick={resetFilters}>
+                Zurücksetzen
+              </button>
+            ) : null}
+          </div>
+        </div>
       </section>
+
+      {formError ? <ErrorState message={formError} /> : null}
+      {deleteError ? <ErrorState message={deleteError} /> : null}
+      {matrixQuery.error ? <ErrorState message={matrixQuery.error.message} /> : null}
 
       <section className="panel overflow-hidden p-0">
         {students.length === 0 ? (
@@ -420,77 +464,108 @@ export const SubjectOverviewPage = () => {
                   }
                 }}
               />
+              <div className="border-t border-line px-5 py-3">
+                <StatusLegend />
+              </div>
             </div>
           </>
         )}
       </section>
-      {isMobileFilterOpen ? (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 lg:hidden" onClick={() => setIsMobileFilterOpen(false)}>
-          <div
-            className="absolute bottom-0 left-0 right-0 rounded-t-3xl bg-white p-5 shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="text-lg font-semibold text-slate-900">Filter</h3>
-              <button type="button" className="button-secondary" onClick={() => setIsMobileFilterOpen(false)}>
-                Schließen
-              </button>
-            </div>
-            <div className="mt-5 space-y-3">
-              <select
-                className="field"
-                value={selectedTypeFilter}
-                onChange={(event) => setSelectedTypeFilter(event.target.value)}
-              >
-                <option value="all">Alle Typen</option>
-                {filterTypes.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.name}
-                  </option>
-                ))}
-                <option value="">Sonstiges</option>
-              </select>
-              <select
-                className="field"
-                value={sortMode}
-                onChange={(event) => setSortMode(event.target.value as "name" | "best" | "weakest")}
-              >
-                <option value="name">Nach Name</option>
-                <option value="best">Beste zuerst</option>
-                <option value="weakest">Schwächste zuerst</option>
-              </select>
-              <select
-                className="field"
-                value={statusFilter}
-                onChange={(event) =>
-                  setStatusFilter(event.target.value as "all" | "open" | "makeup_pending" | "excused")
-                }
-              >
-                <option value="all">Alle Status</option>
-                <option value="open">Offen / fehlend</option>
-                <option value="makeup_pending">Nachtrag offen</option>
-                <option value="excused">Entschuldigt</option>
-              </select>
-              <label className="flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-3 text-sm text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={onlyIncomplete}
-                  onChange={(event) => setOnlyIncomplete(event.target.checked)}
-                />
-                Nur unvollständige
-              </label>
-              <label className="flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-3 text-sm text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={showDirectGrades}
-                  onChange={(event) => setShowDirectGrades(event.target.checked)}
-                />
-                Direkte Noten anzeigen
-              </label>
-            </div>
+      <Modal
+        isOpen={isMobileFilterOpen}
+        onClose={() => setIsMobileFilterOpen(false)}
+        title="Filter"
+        description={`${students.length} von ${studentsQuery.data?.length ?? 0} Schülern werden angezeigt.`}
+        size="sm"
+        footer={
+          <>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => {
+                resetFilters();
+                setIsMobileFilterOpen(false);
+              }}
+            >
+              Zurücksetzen
+            </button>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => setIsMobileFilterOpen(false)}
+            >
+              Anzeigen
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <Field label="Art des Nachweises" htmlFor="mobile-type">
+            <select
+              id="mobile-type"
+              className="field"
+              value={selectedTypeFilter}
+              onChange={(event) => setSelectedTypeFilter(event.target.value)}
+            >
+              <option value="all">Alle Arten</option>
+              {filterTypes.map((type) => (
+                <option key={type.id} value={type.id}>
+                  {type.name}
+                </option>
+              ))}
+              <option value="">Sonstiges</option>
+            </select>
+          </Field>
+
+          <Field label="Sortierung" htmlFor="mobile-sort">
+            <select
+              id="mobile-sort"
+              className="field"
+              value={sortMode}
+              onChange={(event) => setSortMode(event.target.value as "name" | "best" | "weakest")}
+            >
+              <option value="name">Nach Name</option>
+              <option value="best">Beste zuerst</option>
+              <option value="weakest">Schwächste zuerst</option>
+            </select>
+          </Field>
+
+          <Field label="Status" htmlFor="mobile-status">
+            <select
+              id="mobile-status"
+              className="field"
+              value={statusFilter}
+              onChange={(event) =>
+                setStatusFilter(event.target.value as "all" | "open" | "makeup_pending" | "excused")
+              }
+            >
+              <option value="all">Alle Status</option>
+              <option value="open">Offen oder fehlend</option>
+              <option value="makeup_pending">Nachtrag offen</option>
+              <option value="excused">Entschuldigt</option>
+            </select>
+          </Field>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              aria-pressed={onlyIncomplete}
+              className={onlyIncomplete ? "chip chip-active" : "chip"}
+              onClick={() => setOnlyIncomplete((value) => !value)}
+            >
+              Nur unvollständige
+            </button>
+            <button
+              type="button"
+              aria-pressed={showDirectGrades}
+              className={showDirectGrades ? "chip chip-active" : "chip"}
+              onClick={() => setShowDirectGrades((value) => !value)}
+            >
+              Direkte Noten anzeigen
+            </button>
           </div>
         </div>
-      ) : null}
+      </Modal>
       <AssessmentCreateDrawer
         isOpen={isDrawerOpen}
         isSaving={matrixQuery.createDefinition.isPending}
