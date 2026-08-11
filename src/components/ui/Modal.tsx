@@ -20,6 +20,12 @@ const sizeClass: Record<NonNullable<ModalProps["size"]>, string> = {
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+// Module-level state for stacked modals
+let scrollLockCount = 0;
+let savedOverflow: string | null = null;
+let modalIdCounter = 0;
+const openModalIds: number[] = [];
+
 export const Modal = ({
   isOpen,
   onClose,
@@ -31,6 +37,7 @@ export const Modal = ({
 }: ModalProps) => {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const onCloseRef = useRef(onClose);
+  const modalIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -41,8 +48,16 @@ export const Modal = ({
       return;
     }
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    // Manage scroll lock with reference counting
+    if (scrollLockCount === 0) {
+      savedOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+    }
+    scrollLockCount++;
+
+    // Assign modal ID and add to stack
+    modalIdRef.current = ++modalIdCounter;
+    openModalIds.push(modalIdRef.current);
 
     const focusTimer = window.setTimeout(() => {
       const panel = panelRef.current;
@@ -56,8 +71,11 @@ export const Modal = ({
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        event.preventDefault();
-        onCloseRef.current();
+        // Only close if this is the topmost modal
+        if (modalIdRef.current === openModalIds[openModalIds.length - 1]) {
+          event.preventDefault();
+          onCloseRef.current();
+        }
         return;
       }
 
@@ -98,7 +116,21 @@ export const Modal = ({
     return () => {
       window.clearTimeout(focusTimer);
       window.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = previousOverflow;
+
+      // Remove from modal stack
+      const index = openModalIds.indexOf(modalIdRef.current!);
+      if (index > -1) {
+        openModalIds.splice(index, 1);
+      }
+
+      // Manage scroll lock with reference counting
+      scrollLockCount--;
+      if (scrollLockCount === 0) {
+        if (savedOverflow !== null) {
+          document.body.style.overflow = savedOverflow;
+        }
+        savedOverflow = null;
+      }
     };
   }, [isOpen]);
 
