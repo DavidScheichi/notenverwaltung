@@ -1,7 +1,9 @@
 import { useMemo } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { EmptyState } from "../components/ui/EmptyState";
 import { ErrorState } from "../components/ui/ErrorState";
+import { GradeBadge } from "../components/ui/GradeBadge";
+import { PageHeader } from "../components/ui/PageHeader";
 import { useSubjectAssessmentData } from "../hooks/useAssessmentDefinitions";
 import { useClassById } from "../hooks/useClasses";
 import { useStudents } from "../hooks/useStudents";
@@ -76,97 +78,73 @@ export const AssessmentOverviewPage = () => {
 
   return (
     <div className="space-y-6">
-      <section className="panel">
-        <Link to={`/classes/${classId}/subjects/${subjectId}`} className="text-sm font-medium text-brand-700">
-          ← Zurück zur Fächerübersicht
-        </Link>
-        <div className="mt-3">
-          <p className="text-sm text-slate-500">
-            {classQuery.data?.name ?? "Klasse"} · {subjectQuery.data?.name ?? "Fach"}
-          </p>
-          <h2 className="text-2xl font-semibold text-slate-900">
-            {definition?.name ?? "Leistungsnachweis"}
-          </h2>
-        </div>
-        {matrixQuery.error ? (
-          <div className="mt-3">
-            <ErrorState message={matrixQuery.error.message} />
-          </div>
-        ) : null}
-      </section>
+      <PageHeader
+        breadcrumbs={[
+          { label: "Klassen", to: "/classes" },
+          { label: classQuery.data?.name ?? "Klasse", to: `/classes/${classId}` },
+          {
+            label: subjectQuery.data?.name ?? "Fach",
+            to: `/classes/${classId}/subjects/${subjectId}`,
+          },
+          { label: definition?.name ?? "Leistungsnachweis" },
+        ]}
+        eyebrow={`${classQuery.data?.name ?? "Klasse"} · ${subjectQuery.data?.name ?? "Fach"}`}
+        title={definition?.name ?? "Leistungsnachweis"}
+        stats={[
+          { label: "Durchschnitt", value: stats.average === null ? "—" : stats.average.toFixed(2) },
+          { label: "Minimum", value: stats.min === null ? "—" : stats.min.toFixed(2) },
+          { label: "Maximum", value: stats.max === null ? "—" : stats.max.toFixed(2) },
+          { label: "Eingetragen", value: stats.count },
+        ]}
+      />
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="panel">
-          <p className="text-sm text-slate-500">Durchschnitt</p>
-          <p className="mt-2 text-2xl font-semibold text-slate-900">
-            {stats.average === null ? "-" : stats.average.toFixed(2)}
-          </p>
-        </div>
-        <div className="panel">
-          <p className="text-sm text-slate-500">Minimum</p>
-          <p className="mt-2 text-2xl font-semibold text-slate-900">
-            {stats.min === null ? "-" : stats.min.toFixed(2)}
-          </p>
-        </div>
-        <div className="panel">
-          <p className="text-sm text-slate-500">Maximum</p>
-          <p className="mt-2 text-2xl font-semibold text-slate-900">
-            {stats.max === null ? "-" : stats.max.toFixed(2)}
-          </p>
-        </div>
-        <div className="panel">
-          <p className="text-sm text-slate-500">Eingetragen</p>
-          <p className="mt-2 text-2xl font-semibold text-slate-900">{stats.count}</p>
-        </div>
-      </section>
-
-      <section className="panel overflow-hidden p-0">
-        {!definition ? (
-          <div className="p-5">
-            <EmptyState
-              title="Leistungsnachweis nicht gefunden"
-              description="Prüfe die URL oder lege zuerst einen Leistungsnachweis an."
-            />
-          </div>
-        ) : (
+      {matrixQuery.error ? (
+        <ErrorState message={matrixQuery.error.message} />
+      ) : !definition ? (
+        <EmptyState
+          title="Leistungsnachweis nicht gefunden"
+          description="Prüfe die URL oder lege zuerst einen Leistungsnachweis an."
+        />
+      ) : (
+        <section className="card-raised overflow-hidden p-0">
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
-              <thead>
+              <thead className="bg-sunken">
                 <tr>
-                  <th className="border-b border-slate-200 px-4 py-3 text-left">Schüler</th>
-                  <th className="border-b border-slate-200 px-4 py-3 text-left">Wert</th>
-                  <th className="border-b border-slate-200 px-4 py-3 text-left">Prozent</th>
-                  <th className="border-b border-slate-200 px-4 py-3 text-left">Berechnete Note</th>
-                  <th className="border-b border-slate-200 px-4 py-3 text-left">Rang</th>
+                  <th scope="col" className="border-b border-line px-4 py-3 text-left font-semibold text-ink-2">Schüler</th>
+                  <th scope="col" className="border-b border-line px-4 py-3 text-left font-semibold text-ink-2">Wert</th>
+                  <th scope="col" className="border-b border-line px-4 py-3 text-left font-semibold text-ink-2">Prozent</th>
+                  <th scope="col" className="border-b border-line px-4 py-3 text-left font-semibold text-ink-2">Note</th>
+                  <th scope="col" className="border-b border-line px-4 py-3 text-left font-semibold text-ink-2">Rang</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((entry) => (
-                  <tr key={entry.student.id}>
-                    <td className="border-b border-slate-100 px-4 py-3 font-medium">
+                {rows.map((entry, index) => (
+                  <tr key={entry.student.id} className={index % 2 === 1 ? "bg-sunken/50" : undefined}>
+                    <td className="border-b border-line px-4 py-3 font-medium text-ink">
                       {entry.student.first_name} {entry.student.last_name}
                     </td>
-                    <td className="border-b border-slate-100 px-4 py-3">
+                    <td className="border-b border-line px-4 py-3 tabular-nums text-ink-2">
                       {entry.result?.points !== null && entry.result?.points !== undefined
                         ? entry.result.points
-                        : entry.result?.grade ?? "-"}
+                        : entry.result?.grade ?? "—"}
                     </td>
-                    <td className="border-b border-slate-100 px-4 py-3">
-                      {entry.percent === null ? "-" : `${entry.percent.toFixed(1)} %`}
+                    <td className="border-b border-line px-4 py-3 tabular-nums text-ink-2">
+                      {entry.percent === null ? "—" : `${entry.percent.toFixed(1)} %`}
                     </td>
-                    <td className="border-b border-slate-100 px-4 py-3">
-                      {entry.percent === null ? "-" : entry.calculatedGrade ?? "-"}
+                    <td className="border-b border-line px-4 py-3">
+                      <GradeBadge grade={entry.percent === null ? null : entry.calculatedGrade} />
                     </td>
-                    <td className="border-b border-slate-100 px-4 py-3">
-                      {entry.rank ?? "-"}
+                    <td className="border-b border-line px-4 py-3 tabular-nums text-ink-3">
+                      {entry.rank ?? "—"}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        )}
-      </section>
+        </section>
+      )}
     </div>
   );
 };

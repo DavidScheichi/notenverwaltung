@@ -8,6 +8,10 @@ import type {
 } from "../../lib/supabase/types";
 import { calculateSubjectTotals, gradeFromPercent } from "../../lib/subjectOverview";
 import { formatDate } from "../../lib/utils";
+import { Field } from "../ui/Field";
+import { GradeBadge } from "../ui/GradeBadge";
+import { Modal } from "../ui/Modal";
+import { STATUS_META, STATUS_OPTIONS } from "../ui/statusMeta";
 
 interface SubjectMobileListProps {
   students: StudentWithEnrollment[];
@@ -24,24 +28,6 @@ interface SubjectMobileListProps {
     status?: AssessmentResultStatus;
   }) => Promise<void>;
 }
-
-const statusSymbols: Record<AssessmentResultStatus, string> = {
-  filled: "",
-  missing: "—",
-  excused: "E",
-  absent_unexcused: "U",
-  makeup_pending: "N",
-  exempt: "B",
-};
-
-const statusOptions: Array<{ value: AssessmentResultStatus; label: string }> = [
-  { value: "filled", label: "Eingetragen" },
-  { value: "missing", label: "Fehlt" },
-  { value: "excused", label: "Entschuldigt" },
-  { value: "absent_unexcused", label: "Unentschuldigt" },
-  { value: "makeup_pending", label: "Nachtrag offen" },
-  { value: "exempt", label: "Befreit" },
-];
 
 const parsePoints = (value: string) => {
   const trimmed = value.trim();
@@ -77,7 +63,7 @@ const resultLabel = (
 
   const status = result.status ?? "filled";
   if (status !== "filled") {
-    return statusSymbols[status];
+    return STATUS_META[status].symbol;
   }
 
   if (result.points !== null) {
@@ -197,10 +183,7 @@ export const SubjectMobileList = memo(({
         const entriesToRender = isExpanded ? row.entries : row.previewEntries;
 
         return (
-          <article
-            key={row.student.id}
-            className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"
-          >
+          <article key={row.student.id} className="card-raised p-4">
             <button
               type="button"
               className="w-full text-left"
@@ -212,71 +195,77 @@ export const SubjectMobileList = memo(({
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h3 className="truncate text-lg font-semibold text-slate-900">
+                  <h3 className="truncate text-base font-semibold text-ink">
                     {row.student.first_name} {row.student.last_name}
                   </h3>
                   {row.incompleteCount > 0 ? (
-                    <p className="mt-1 text-sm text-amber-700">
+                    <p className="mt-1 text-[13px] text-amber-700">
                       {row.incompleteCount} offene Einträge
                     </p>
                   ) : (
-                    <p className="mt-1 text-sm text-slate-500">Alle Einträge erfasst</p>
+                    <p className="mt-1 text-[13px] text-ink-3">Alle Einträge erfasst</p>
                   )}
                 </div>
-                <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">
-                  {isExpanded ? "Weniger" : "Mehr"}
-                </span>
+                <span className="badge-neutral shrink-0">{isExpanded ? "Weniger" : "Mehr"}</span>
               </div>
-              <div className="mt-4 grid grid-cols-3 gap-2 text-sm">
-                <div className="rounded-2xl bg-slate-50 px-3 py-2">
-                  <p className="text-xs text-slate-500">Punkte</p>
-                  <p className="mt-1 font-semibold text-slate-900">
+
+              <div className="mt-3 flex items-center gap-4 border-t border-line pt-3 text-[13px]">
+                <span className="text-ink-3">
+                  Punkte{" "}
+                  <span className="font-semibold tabular-nums text-ink">
                     {row.totals.maxWeighted > 0
                       ? `${row.totals.achievedWeighted.toFixed(1)} / ${row.totals.maxWeighted.toFixed(1)}`
                       : "—"}
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-slate-50 px-3 py-2">
-                  <p className="text-xs text-slate-500">Prozent</p>
-                  <p className="mt-1 font-semibold text-slate-900">
+                  </span>
+                </span>
+                <span className="text-ink-3">
+                  Prozent{" "}
+                  <span className="font-semibold tabular-nums text-ink">
                     {row.totals.percent === null ? "—" : `${row.totals.percent.toFixed(1)} %`}
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-brand-50 px-3 py-2">
-                  <p className="text-xs text-brand-700">Note</p>
-                  <p className="mt-1 font-semibold text-slate-900">{row.finalGrade ?? "—"}</p>
-                </div>
+                  </span>
+                </span>
+                <span className="ml-auto">
+                  <GradeBadge grade={row.finalGrade} />
+                </span>
               </div>
             </button>
 
             <div className="mt-4 space-y-2">
-              {entriesToRender.map(({ definition, result }) => (
-                <button
-                  key={`${row.student.id}-${definition.id}`}
-                  type="button"
-                  className="flex w-full items-start justify-between gap-3 rounded-2xl border border-slate-200 px-3 py-3 text-left transition hover:border-brand-400 hover:bg-slate-50"
-                  onClick={() => openEditor(row.student, definition, result)}
-                >
-                  <div className="min-w-0">
-                    <p className="truncate font-medium text-slate-900">
-                      {definition.short_label || definition.name}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {typeLabel(definition.type_id)}
-                      {definition.assessment_date ? ` · ${formatDate(definition.assessment_date)}` : ""}
-                    </p>
-                  </div>
-                  <span className="shrink-0 rounded-xl bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-800">
-                    {resultLabel(result, showDirectGrades)}
-                  </span>
-                </button>
-              ))}
+              {entriesToRender.map(({ definition, result }) => {
+                const status = result?.status ?? "filled";
+                const valueClass =
+                  status !== "filled" ? STATUS_META[status].textClass : "text-ink";
+
+                return (
+                  <button
+                    key={`${row.student.id}-${definition.id}`}
+                    type="button"
+                    className="flex w-full items-start justify-between gap-3 rounded-2xl border border-line px-3 py-3 text-left transition hover:border-accent hover:bg-sunken"
+                    onClick={() => openEditor(row.student, definition, result)}
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-ink">
+                        {definition.short_label || definition.name}
+                      </p>
+                      <p className="mt-1 text-xs text-ink-3">
+                        {typeLabel(definition.type_id)}
+                        {definition.assessment_date
+                          ? ` · ${formatDate(definition.assessment_date)}`
+                          : ""}
+                      </p>
+                    </div>
+                    <span className={`badge-neutral shrink-0 tabular-nums ${valueClass}`}>
+                      {resultLabel(result, showDirectGrades)}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
             {!isExpanded && row.entries.length > row.previewEntries.length ? (
               <button
                 type="button"
-                className="mt-3 text-sm font-semibold text-brand-700"
+                className="mt-3 text-sm font-semibold text-accent-strong"
                 onClick={() => setExpandedStudentId(row.student.id)}
               >
                 Alle Einträge anzeigen
@@ -286,40 +275,42 @@ export const SubjectMobileList = memo(({
         );
       })}
 
-      {editor ? (
-        <div className="fixed inset-0 z-50 bg-slate-900/40" onClick={() => setEditor(null)}>
-          <div
-            className="absolute bottom-0 left-0 right-0 max-h-[88vh] overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
+      <Modal
+        isOpen={Boolean(editor)}
+        onClose={() => setEditor(null)}
+        title={editor?.definition.name ?? ""}
+        description={
+          editor ? `${editor.student.first_name} ${editor.student.last_name}` : undefined
+        }
+        footer={
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={isSaving}
+            onClick={() => void handleSave()}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm text-slate-500">
-                  {editor.student.first_name} {editor.student.last_name}
-                </p>
-                <h3 className="text-lg font-semibold text-slate-900">
-                  {editor.definition.name}
-                </h3>
-              </div>
-              <button type="button" className="button-secondary" onClick={() => setEditor(null)}>
-                Schließen
-              </button>
-            </div>
-
-            <div className="mt-5 space-y-3">
+            {isSaving ? "Wird gespeichert..." : "Speichern"}
+          </button>
+        }
+      >
+        {editor ? (
+          <div className="space-y-3">
+            <Field label="Status">
               <select
                 className="field"
                 value={statusDraft}
                 onChange={(event) => setStatusDraft(event.target.value as AssessmentResultStatus)}
               >
-                {statusOptions.map((option) => (
+                {STATUS_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
                 ))}
               </select>
+            </Field>
 
-              {statusDraft === "filled" && editor.definition.input_mode === "either" ? (
+            {statusDraft === "filled" && editor.definition.input_mode === "either" ? (
+              <Field label="Eingabeart">
                 <select
                   className="field"
                   value={modeDraft}
@@ -328,11 +319,13 @@ export const SubjectMobileList = memo(({
                   <option value="points">Punkte</option>
                   <option value="grade">Note</option>
                 </select>
-              ) : null}
+              </Field>
+            ) : null}
 
-              {statusDraft === "filled" &&
-              (editor.definition.input_mode === "points" ||
-                (editor.definition.input_mode === "either" && modeDraft === "points")) ? (
+            {statusDraft === "filled" &&
+            (editor.definition.input_mode === "points" ||
+              (editor.definition.input_mode === "either" && modeDraft === "points")) ? (
+              <Field label="Punkte">
                 <input
                   className="field"
                   type="number"
@@ -341,11 +334,13 @@ export const SubjectMobileList = memo(({
                   value={pointsDraft}
                   onChange={(event) => setPointsDraft(event.target.value)}
                 />
-              ) : null}
+              </Field>
+            ) : null}
 
-              {statusDraft === "filled" &&
-              (editor.definition.input_mode === "grade" ||
-                (editor.definition.input_mode === "either" && modeDraft === "grade")) ? (
+            {statusDraft === "filled" &&
+            (editor.definition.input_mode === "grade" ||
+              (editor.definition.input_mode === "either" && modeDraft === "grade")) ? (
+              <Field label="Note">
                 <input
                   className="field"
                   type="number"
@@ -356,26 +351,17 @@ export const SubjectMobileList = memo(({
                   value={gradeDraft}
                   onChange={(event) => setGradeDraft(event.target.value)}
                 />
-              ) : null}
+              </Field>
+            ) : null}
 
-              {saveError ? (
-                <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-                  {saveError}
-                </p>
-              ) : null}
-
-              <button
-                type="button"
-                className="button-primary w-full"
-                disabled={isSaving}
-                onClick={() => void handleSave()}
-              >
-                {isSaving ? "Wird gespeichert..." : "Speichern"}
-              </button>
-            </div>
+            {saveError ? (
+              <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                {saveError}
+              </p>
+            ) : null}
           </div>
-        </div>
-      ) : null}
+        ) : null}
+      </Modal>
     </div>
   );
 });

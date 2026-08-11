@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { EmptyState } from "../components/ui/EmptyState";
 import { ErrorState } from "../components/ui/ErrorState";
+import { GradeBadge } from "../components/ui/GradeBadge";
+import { PageHeader } from "../components/ui/PageHeader";
 import { useStudentAssessmentOverview } from "../hooks/useAssessmentDefinitions";
 import { useClassById } from "../hooks/useClasses";
 import { useStudentById } from "../hooks/useStudents";
@@ -59,116 +61,98 @@ export const StudentDetailPage = () => {
   }, [assessmentOverviewQuery.data?.definitions, assessmentOverviewQuery.data?.results, studentId, subjectsQuery.data]);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
-      <section className="panel">
-        <Link
-          to={classIdParam ? `/classes/${derivedClassId}` : "/students"}
-          className="text-sm font-medium text-brand-700"
-        >
-          ← {classIdParam ? "Zurück zur Klasse" : "Zurück zu den Schülern"}
-        </Link>
-        <h2 className="mt-3 text-2xl font-semibold text-slate-900">
-          {studentQuery.data?.first_name} {studentQuery.data?.last_name}
-        </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Klasse: {classQuery.data?.name ?? "Wird geladen..."}
-        </p>
-        <p className="mt-3 text-sm text-slate-600">
-          {studentQuery.data?.notes || "Keine Zusatznotiz vorhanden."}
-        </p>
-        <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <h3 className="text-lg font-semibold text-slate-900">Leistungsdetails</h3>
-          <p className="mt-2 text-sm text-slate-600">
-            Punkte und Noten werden in der Fächer-Notenübersicht pro Leistungsnachweis gepflegt und hier
-            gesammelt angezeigt.
-          </p>
-        </div>
-      </section>
+    <>
+      <PageHeader
+        breadcrumbs={
+          classIdParam
+            ? [
+                { label: "Klassen", to: "/classes" },
+                { label: classQuery.data?.name ?? "Klasse", to: `/classes/${derivedClassId}` },
+                { label: `${studentQuery.data?.first_name ?? ""} ${studentQuery.data?.last_name ?? ""}`.trim() || "Schüler" },
+              ]
+            : [
+                { label: "Schüler", to: "/students" },
+                { label: `${studentQuery.data?.first_name ?? ""} ${studentQuery.data?.last_name ?? ""}`.trim() || "Schüler" },
+              ]
+        }
+        eyebrow={classQuery.data?.name ?? "Klasse"}
+        title={`${studentQuery.data?.first_name ?? ""} ${studentQuery.data?.last_name ?? ""}`.trim() || "Schüler"}
+        description={studentQuery.data?.notes || undefined}
+      />
 
-      <section className="panel">
-        <h3 className="text-lg font-semibold text-slate-900">Leistungsnachweise pro Fach</h3>
-        {assessmentOverviewQuery.error ? (
-          <div className="mt-4">
-            <ErrorState message={assessmentOverviewQuery.error.message} />
-          </div>
-        ) : null}
-        {groupedBySubject.length === 0 ? (
-          <div className="mt-4">
-            <EmptyState
-              title="Keine Fächer angelegt"
-              description="Lege zuerst in der Klasse Fächer an."
-            />
-          </div>
-        ) : null}
-        <div className="mt-4 grid gap-4">
+      {assessmentOverviewQuery.error ? (
+        <ErrorState message={assessmentOverviewQuery.error.message} />
+      ) : groupedBySubject.length === 0 ? (
+        <EmptyState
+          title="Noch keine Fächer"
+          description="Lege in der Klasse zuerst Fächer an, damit hier Ergebnisse erscheinen."
+        />
+      ) : (
+        <div className="space-y-4">
           {groupedBySubject.map(({ subject, entries }) => (
-            <div key={subject.id} className="rounded-2xl border border-slate-200 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="font-semibold text-slate-900">{subject.name}</p>
-                  <p className="text-sm text-slate-500">Alle Leistungsnachweise dieses Fachs</p>
-                </div>
+            <section key={subject.id} className="card-raised overflow-hidden">
+              <div className="flex items-center justify-between gap-4 border-b border-line px-5 py-3.5">
+                <h2 className="text-base font-semibold text-ink">{subject.name}</h2>
+                <Link
+                  to={`/classes/${derivedClassId}/subjects/${subject.id}`}
+                  className="btn-ghost btn-sm"
+                >
+                  Zur Notenübersicht
+                </Link>
               </div>
 
               {entries.length === 0 ? (
-                <div className="mt-4">
-                  <EmptyState
-                    title="Noch keine Einträge"
-                    description="Trage Werte in der Notenübersicht dieses Fachs ein."
-                  />
-                </div>
+                <p className="px-5 py-6 text-center text-sm text-ink-3">
+                  Noch keine Ergebnisse in diesem Fach.
+                </p>
               ) : (
-                <div className="mt-4 grid gap-3">
-                  {entries.map((entry) => (
-                    <div
-                      key={entry.definition.id}
-                      className="rounded-2xl border border-slate-100 bg-slate-50 p-3"
-                    >
-                      <p className="text-sm font-semibold text-slate-900">
-                        {entry.definition.name}
-                      </p>
-                      <p className="text-sm text-slate-500">
-                        {entry.definition.assessment_date
-                          ? formatDate(entry.definition.assessment_date)
-                          : "Ohne Datum"}
-                        {" · "}
-                        Punkte:{" "}
-                        {entry.result?.points !== null && entry.result?.points !== undefined
-                          ? entry.result.points
-                          : "-"}
-                        {" · "}
-                        Note:{" "}
-                        {(() => {
-                          if (
-                            entry.result?.grade !== null &&
-                            entry.result?.grade !== undefined
-                          ) {
-                            return entry.result.grade;
-                          }
-
-                          const percent = calculateAssessmentPercent(
-                            entry.result?.points ?? null,
-                            entry.definition.max_points,
-                          );
-                          const boundaries = resolveGradeBoundaries(
-                            assessmentOverviewQuery.data?.boundaries ?? [],
-                            subject.id,
+                <div className="divide-y divide-line">
+                  {entries.map((entry) => {
+                    const displayGrade =
+                      entry.result?.grade !== null && entry.result?.grade !== undefined
+                        ? entry.result.grade
+                        : gradeFromPercent(
+                            calculateAssessmentPercent(
+                              entry.result?.points ?? null,
+                              entry.definition.max_points,
+                            ),
+                            resolveGradeBoundaries(
+                              assessmentOverviewQuery.data?.boundaries ?? [],
+                              subject.id,
+                            ),
                           );
 
-                          return gradeFromPercent(percent, boundaries) ?? "-";
-                        })()}
-                      </p>
-                      {entry.result?.comment ? (
-                        <p className="mt-1 text-sm text-slate-600">{entry.result.comment}</p>
-                      ) : null}
-                    </div>
-                  ))}
+                    return (
+                      <div
+                        key={entry.definition.id}
+                        className="flex items-start justify-between gap-4 px-5 py-3.5"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-ink">
+                            {entry.definition.name}
+                          </p>
+                          <p className="mt-0.5 text-[13px] text-ink-3">
+                            {entry.definition.assessment_date
+                              ? formatDate(entry.definition.assessment_date)
+                              : "Ohne Datum"}
+                            {entry.result?.points !== null && entry.result?.points !== undefined
+                              ? ` · ${entry.result.points} Punkte`
+                              : ""}
+                          </p>
+                          {entry.result?.comment ? (
+                            <p className="mt-1 text-[13px] text-ink-2">{entry.result.comment}</p>
+                          ) : null}
+                        </div>
+                        <GradeBadge grade={displayGrade} />
+                      </div>
+                    );
+                  })}
                 </div>
               )}
-            </div>
+            </section>
           ))}
         </div>
-      </section>
-    </div>
+      )}
+    </>
   );
 };
