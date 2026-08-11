@@ -21,7 +21,6 @@ const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 // Module-level state for stacked modals
-let scrollLockCount = 0;
 let savedOverflow: string | null = null;
 let modalIdCounter = 0;
 const openModalIds: number[] = [];
@@ -48,15 +47,15 @@ export const Modal = ({
       return;
     }
 
-    // Manage scroll lock with reference counting
-    if (scrollLockCount === 0) {
+    // Assign modal ID and add to stack
+    modalIdRef.current = ++modalIdCounter;
+
+    // Manage scroll lock: only lock on first modal
+    if (openModalIds.length === 0) {
       savedOverflow = document.body.style.overflow;
       document.body.style.overflow = "hidden";
     }
-    scrollLockCount++;
 
-    // Assign modal ID and add to stack
-    modalIdRef.current = ++modalIdCounter;
     openModalIds.push(modalIdRef.current);
 
     const focusTimer = window.setTimeout(() => {
@@ -123,9 +122,8 @@ export const Modal = ({
         openModalIds.splice(index, 1);
       }
 
-      // Manage scroll lock with reference counting
-      scrollLockCount--;
-      if (scrollLockCount === 0) {
+      // Manage scroll lock: unlock only when last modal closes
+      if (openModalIds.length === 0) {
         if (savedOverflow !== null) {
           document.body.style.overflow = savedOverflow;
         }

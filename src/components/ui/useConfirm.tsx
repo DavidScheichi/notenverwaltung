@@ -10,14 +10,12 @@ export interface ConfirmOptions {
 
 interface ConfirmState extends ConfirmOptions {
   isOpen: boolean;
-  isBusy?: boolean;
 }
 
 const closedState: ConfirmState = {
   isOpen: false,
   title: "",
   description: "",
-  isBusy: false,
 };
 
 export const useConfirm = () => {
@@ -34,7 +32,7 @@ export const useConfirm = () => {
     return new Promise<boolean>((resolve) => {
       resolverRef.current?.(false);
       resolverRef.current = resolve;
-      setState({ ...options, isOpen: true, isBusy: false });
+      setState({ ...options, isOpen: true });
     });
   }, []);
 
@@ -45,19 +43,8 @@ export const useConfirm = () => {
       description={state.description}
       confirmLabel={state.confirmLabel ?? "Löschen"}
       tone={state.tone ?? "danger"}
-      isBusy={state.isBusy ?? false}
-      onConfirm={() => {
-        setState((prev) => ({ ...prev, isBusy: true }));
-        resolverRef.current?.(true);
-      }}
-      onCancel={() => {
-        if (state.isBusy) {
-          setState(closedState);
-          resolverRef.current = null;
-        } else {
-          settle(false);
-        }
-      }}
+      onConfirm={() => settle(true)}
+      onCancel={() => settle(false)}
     />
   );
 
