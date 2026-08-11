@@ -42,7 +42,23 @@ const toneClass: Record<ToastType, string> = {
   info: "border-sky-200 bg-sky-50 text-sky-900",
   warning: "border-amber-200 bg-amber-50 text-amber-900",
   error: "border-rose-200 bg-rose-50 text-rose-900",
-  undoable: "border-slate-300 bg-white text-slate-900",
+  undoable: "border-line-strong bg-surface text-ink",
+};
+
+const toneSymbol: Record<ToastType, string> = {
+  success: "✓",
+  info: "i",
+  warning: "!",
+  error: "!",
+  undoable: "↩",
+};
+
+const toneBadge: Record<ToastType, string> = {
+  success: "bg-emerald-600 text-white",
+  info: "bg-sky-600 text-white",
+  warning: "bg-amber-500 text-white",
+  error: "bg-rose-600 text-white",
+  undoable: "bg-ink text-white",
 };
 
 export const ToastProvider = ({ children }: { children: ReactNode }) => {
@@ -93,41 +109,48 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
   return (
     <ToastContext.Provider value={api}>
       {children}
-      <div className="pointer-events-none fixed bottom-4 right-4 z-[100] flex w-[92vw] max-w-sm flex-col gap-2 sm:w-96">
+      <div className="pointer-events-none fixed inset-x-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-[100] flex flex-col gap-2 sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-96">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`pointer-events-auto rounded-xl border px-3 py-2 shadow-sm ${toneClass[toast.type]}`}
+            role="status"
+            className={`pointer-events-auto flex animate-toast-in items-start gap-3 rounded-xl border px-4 py-3 shadow-overlay ${toneClass[toast.type]}`}
           >
-            <div className="flex items-start gap-2">
-              <p className="flex-1 text-sm">{toast.message}</p>
+            <span
+              aria-hidden="true"
+              className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${toneBadge[toast.type]}`}
+            >
+              {toneSymbol[toast.type]}
+            </span>
+
+            <p className="min-w-0 flex-1 text-sm font-medium leading-snug">{toast.message}</p>
+
+            {toast.type === "undoable" && toast.onUndo ? (
               <button
                 type="button"
-                className="text-xs font-semibold text-slate-500 hover:text-slate-800"
-                onClick={() => dismiss(toast.id)}
+                className="btn-secondary btn-sm shrink-0"
+                onClick={async () => {
+                  try {
+                    await toast.onUndo?.();
+                  } catch {
+                    push("error", "Rückgängig konnte nicht ausgeführt werden.");
+                  } finally {
+                    dismiss(toast.id);
+                  }
+                }}
               >
-                Schließen
+                Rückgängig
               </button>
-            </div>
-            {toast.type === "undoable" && toast.onUndo ? (
-              <div className="mt-2 flex justify-end">
-                <button
-                  type="button"
-                  className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                  onClick={async () => {
-                    try {
-                      await toast.onUndo?.();
-                    } catch {
-                      push("error", "Rückgängig konnte nicht ausgeführt werden.");
-                    } finally {
-                      dismiss(toast.id);
-                    }
-                  }}
-                >
-                  Rückgängig
-                </button>
-              </div>
             ) : null}
+
+            <button
+              type="button"
+              aria-label="Meldung schließen"
+              className="-mr-1 -mt-1 shrink-0 rounded p-1 text-lg leading-none opacity-60 transition hover:opacity-100"
+              onClick={() => dismiss(toast.id)}
+            >
+              ×
+            </button>
           </div>
         ))}
       </div>
