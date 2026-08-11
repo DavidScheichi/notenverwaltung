@@ -383,7 +383,7 @@ export const SubjectOverviewPage = () => {
       {deleteError ? <ErrorState message={deleteError} /> : null}
       {matrixQuery.error ? <ErrorState message={matrixQuery.error.message} /> : null}
 
-      <section className="panel p-0">
+      <section className="card-raised card-pad p-0">
         {students.length === 0 ? (
           <div className="p-5">
             <EmptyState

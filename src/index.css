@@ -161,20 +161,4 @@
     @apply transition hover:bg-sunken;
   }
 
-  /* Legacy-Aliase — bestehende Aufrufe bleiben lauffähig, bis die Seiten umgestellt sind */
-  .panel {
-    @apply card-raised card-pad;
-  }
-
-  .button-primary {
-    @apply btn-primary;
-  }
-
-  .button-secondary {
-    @apply btn-secondary;
-  }
-
-  .button-danger {
-    @apply btn border border-rose-200 bg-surface text-rose-700 hover:bg-rose-50;
-  }
 }

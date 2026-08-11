@@ -94,8 +94,8 @@ const GradeRowBase = ({
         return (
           <td
             key={`${definition.id}-${student.id}`}
-            className={`border-b border-slate-100 px-2 py-2 align-top ${
-              activeColumnIndex === columnIndex ? "bg-brand-50/20" : ""
+            className={`border-b border-line px-2 py-2 align-top ${
+              activeColumnIndex === columnIndex ? "bg-accent-soft/20" : ""
             } ${
               isPasted ? "bg-emerald-50/60" : ""
             } ${
