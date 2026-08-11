@@ -1,105 +1,100 @@
 import { Navigate, NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import { useClasses } from "../../hooks/useClasses";
+import { AccountMenu } from "./AccountMenu";
+import { BottomNav } from "./BottomNav";
+
+const navItemClass = ({ isActive }: { isActive: boolean }) =>
+  `relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
+    isActive
+      ? "bg-accent-soft text-accent-strong before:absolute before:inset-y-1.5 before:-left-2 before:w-1 before:rounded-full before:bg-accent"
+      : "text-ink-2 hover:bg-sunken hover:text-ink"
+  }`;
 
 export const AppShell = () => {
-  const { isAuthenticated, isLoading, signOut, session } = useAuth();
+  const { isAuthenticated, isLoading, session } = useAuth();
+  const classesQuery = useClasses();
 
   if (isLoading) {
-    return <div className="p-6 text-sm text-slate-500">Lade Sitzung...</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-ink-3">Sitzung wird geladen...</p>
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
+  const email = session?.user.email ?? "";
+  const classes = classesQuery.data ?? [];
+
   return (
-    <div className="min-h-screen bg-white">
-      <div className="mx-auto flex min-h-screen max-w-[1440px]">
-        <aside className="hidden w-72 shrink-0 border-r border-slate-200 bg-slate-50/80 p-6 lg:block">
-          <div className="flex h-full flex-col">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-700">
-                Notenverwaltung
-              </p>
-              <h1 className="mt-2 text-2xl font-semibold text-slate-900">Lehrerbereich</h1>
-              <p className="mt-1 text-sm text-slate-500">{session?.user.email}</p>
-            </div>
-            <nav className="mt-8 grid gap-2">
-              <NavLink
-                to="/dashboard"
-                className={({ isActive }) =>
-                  isActive ? "button-primary justify-start" : "button-secondary justify-start"
-                }
-              >
-                Dashboard
-              </NavLink>
-              <NavLink
-                to="/students"
-                className={({ isActive }) =>
-                  isActive ? "button-primary justify-start" : "button-secondary justify-start"
-                }
-              >
-                Schüler
-              </NavLink>
-              <NavLink
-                to="/subjects"
-                className={({ isActive }) =>
-                  isActive ? "button-primary justify-start" : "button-secondary justify-start"
-                }
-              >
-                Fächer
-              </NavLink>
-            </nav>
-            <div className="mt-auto">
-              <button type="button" onClick={() => void signOut()} className="button-danger w-full">
-                Logout
-              </button>
-            </div>
-          </div>
+    <div className="min-h-screen bg-canvas">
+      <header className="sticky top-0 z-30 border-b border-line bg-surface/90 backdrop-blur">
+        <div className="mx-auto flex h-14 max-w-[1440px] items-center justify-between gap-4 px-4 sm:px-6">
+          <NavLink to="/dashboard" className="flex items-center gap-2.5">
+            <span
+              aria-hidden="true"
+              className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-sm font-bold text-white"
+            >
+              N
+            </span>
+            <span className="text-sm font-semibold tracking-tight text-ink">Notenverwaltung</span>
+          </NavLink>
+          <AccountMenu email={email} />
+        </div>
+      </header>
+
+      <div className="mx-auto flex max-w-[1440px]">
+        <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-64 shrink-0 overflow-y-auto border-r border-line px-4 py-6 lg:block">
+          <nav aria-label="Hauptnavigation" className="space-y-1">
+            <NavLink to="/dashboard" className={navItemClass}>
+              Übersicht
+            </NavLink>
+            <NavLink to="/classes" end className={navItemClass}>
+              Klassen
+            </NavLink>
+
+            {classes.length > 0 ? (
+              <ul className="mb-1 ml-3 space-y-0.5 border-l border-line pl-3">
+                {classes.map((schoolClass) => (
+                  <li key={schoolClass.id}>
+                    <NavLink
+                      to={`/classes/${schoolClass.id}`}
+                      className={({ isActive }) =>
+                        `block truncate rounded-md px-2.5 py-1.5 text-[13px] transition ${
+                          isActive
+                            ? "bg-sunken font-semibold text-ink"
+                            : "text-ink-3 hover:bg-sunken hover:text-ink"
+                        }`
+                      }
+                    >
+                      {schoolClass.name}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
+            <NavLink to="/students" className={navItemClass}>
+              Schüler
+            </NavLink>
+            <NavLink to="/subjects" className={navItemClass}>
+              Fächer
+            </NavLink>
+          </nav>
         </aside>
-        <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
-          <div className="mx-auto flex max-w-6xl flex-col gap-6">
-            <header className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white px-5 py-4 shadow-sm lg:hidden">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-700">
-                  Notenverwaltung
-                </p>
-                <p className="mt-1 text-sm text-slate-500">{session?.user.email}</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <NavLink
-                  to="/dashboard"
-                  className={({ isActive }) =>
-                    isActive ? "button-primary" : "button-secondary"
-                  }
-                >
-                  Dashboard
-                </NavLink>
-                <NavLink
-                  to="/students"
-                  className={({ isActive }) =>
-                    isActive ? "button-primary" : "button-secondary"
-                  }
-                >
-                  Schüler
-                </NavLink>
-                <NavLink
-                  to="/subjects"
-                  className={({ isActive }) =>
-                    isActive ? "button-primary" : "button-secondary"
-                  }
-                >
-                  Fächer
-                </NavLink>
-                <button type="button" onClick={() => void signOut()} className="button-danger">
-                  Logout
-                </button>
-              </div>
-            </header>
+
+        <main className="min-w-0 flex-1 px-4 pb-24 pt-6 sm:px-6 lg:px-8 lg:pb-10">
+          <div className="mx-auto max-w-5xl space-y-6">
             <Outlet />
           </div>
         </main>
       </div>
+
+      <BottomNav />
     </div>
   );
 };
