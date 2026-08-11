@@ -18,6 +18,13 @@ import { supabase } from "../lib/supabase/client";
 import type { AssessmentDefinition } from "../lib/supabase/types";
 import { parsePointsMapping, subjectSchema } from "../schemas/subjects";
 
+const LoadingRows = () => (
+  <div className="space-y-3">
+    <div className="h-14 animate-pulse rounded-xl bg-sunken" />
+    <div className="h-14 animate-pulse rounded-xl bg-sunken" />
+  </div>
+);
+
 export const SubjectsPage = () => {
   const toast = useToast();
   const { confirm, confirmDialog } = useConfirm();
@@ -233,6 +240,8 @@ export const SubjectsPage = () => {
         <ErrorState message={subjectsQuery.error.message} />
       ) : definitionsQuery.error ? (
         <ErrorState message={definitionsQuery.error.message} />
+      ) : subjectsQuery.isLoading ? (
+        <LoadingRows />
       ) : filteredSubjects.length === 0 ? (
         <EmptyState
           title={hasFilters ? "Keine Treffer" : "Noch keine Fächer"}

@@ -23,6 +23,13 @@ import type {
   AssessmentType,
 } from "../lib/supabase/types";
 
+const LoadingRows = () => (
+  <div className="space-y-3">
+    <div className="h-14 animate-pulse rounded-xl bg-sunken" />
+    <div className="h-14 animate-pulse rounded-xl bg-sunken" />
+  </div>
+);
+
 export const SubjectOverviewPage = () => {
   const toast = useToast();
   const { confirm, confirmDialog } = useConfirm();
@@ -384,7 +391,11 @@ export const SubjectOverviewPage = () => {
       {matrixQuery.error ? <ErrorState message={matrixQuery.error.message} /> : null}
 
       <section className="card-raised card-pad p-0">
-        {students.length === 0 ? (
+        {studentsQuery.isLoading || matrixQuery.isLoading ? (
+          <div className="p-5">
+            <LoadingRows />
+          </div>
+        ) : students.length === 0 ? (
           <div className="p-5">
             <EmptyState
               title="Keine Schüler in dieser Klasse"

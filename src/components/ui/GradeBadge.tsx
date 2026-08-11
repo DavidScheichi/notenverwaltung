@@ -3,10 +3,15 @@ interface GradeBadgeProps {
   fallback?: string;
 }
 
-const toneClass = (grade: number) => {
-  const rounded = Math.min(5, Math.max(1, Math.round(grade)));
-  return `grade-${rounded}`;
+const TONE: Record<number, string> = {
+  1: "grade-1",
+  2: "grade-2",
+  3: "grade-3",
+  4: "grade-4",
+  5: "grade-5",
 };
+
+const toneClass = (grade: number) => TONE[Math.min(5, Math.max(1, Math.round(grade)))];
 
 const formatGrade = (grade: number) =>
   Number.isInteger(grade) ? String(grade) : grade.toFixed(1).replace(".", ",");

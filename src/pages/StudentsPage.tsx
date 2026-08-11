@@ -27,6 +27,13 @@ import type {
 } from "../lib/supabase/types";
 import { studentSchema } from "../schemas/students";
 
+const LoadingRows = () => (
+  <div className="space-y-3">
+    <div className="h-14 animate-pulse rounded-xl bg-sunken" />
+    <div className="h-14 animate-pulse rounded-xl bg-sunken" />
+  </div>
+);
+
 export const StudentsPage = () => {
   const toast = useToast();
   const { confirm, confirmDialog } = useConfirm();
@@ -293,6 +300,8 @@ export const StudentsPage = () => {
         <ErrorState message={studentsQuery.error.message} />
       ) : summaryQuery.error ? (
         <ErrorState message={summaryQuery.error.message} />
+      ) : studentsQuery.isLoading ? (
+        <LoadingRows />
       ) : filteredStudents.length === 0 ? (
         <EmptyState
           title={hasFilters ? "Keine Suchergebnisse" : "Keine Schüler vorhanden"}

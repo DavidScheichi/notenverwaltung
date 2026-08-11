@@ -89,7 +89,7 @@ export const StudentDetailPage = () => {
 
       {assessmentOverviewQuery.error ? (
         <ErrorState message={assessmentOverviewQuery.error.message} />
-      ) : subjectsQuery.isLoading || assessmentOverviewQuery.isLoading ? (
+      ) : studentQuery.isLoading || subjectsQuery.isLoading || assessmentOverviewQuery.isLoading ? (
         <LoadingRows />
       ) : groupedBySubject.length === 0 ? (
         <EmptyState
