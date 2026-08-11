@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { loginSchema } from "../../schemas/auth";
+import { Field } from "../ui/Field";
+import { ErrorState } from "../ui/ErrorState";
 
 interface LoginFormProps {
   onSubmit: (values: { email: string; password: string }) => Promise<void>;
@@ -37,34 +39,30 @@ export const LoginForm = ({
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">E-Mail</label>
+      <Field label="E-Mail" htmlFor="login-email">
         <input
+          id="login-email"
           className="field"
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           placeholder="max@schule.at"
         />
-      </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">Passwort</label>
+      </Field>
+      <Field label="Passwort" htmlFor="login-password">
         <input
+          id="login-password"
           className="field"
           type="password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           placeholder="Mindestens 6 Zeichen"
         />
-      </div>
-      {error ? (
-        <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-          {error}
-        </p>
-      ) : null}
+      </Field>
+      {error ? <ErrorState message={error} /> : null}
       <button
         type="submit"
-        className="button-primary w-full"
+        className="btn-primary w-full"
         disabled={isSubmitting || isDisabled}
       >
         {isDisabled ? "Konfiguration fehlt" : isSubmitting ? "Prüfe Zugang..." : "Einloggen"}
