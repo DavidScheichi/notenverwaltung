@@ -151,10 +151,9 @@ export const DashboardPage = () => {
     }
   };
 
-  const anyError = classesError || studentsError || subjectsError || resultsMetaQuery.error || recentDefinitionsQuery.error;
-
   const classesSectionError = classesError;
   const recentSectionError = resultsMetaQuery.error || recentDefinitionsQuery.error;
+  const anyError = studentsError || subjectsError;
 
   return (
     <>
