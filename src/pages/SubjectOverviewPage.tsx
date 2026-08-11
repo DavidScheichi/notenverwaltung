@@ -10,6 +10,7 @@ import { Field } from "../components/ui/Field";
 import { Modal } from "../components/ui/Modal";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusLegend } from "../components/ui/StatusLegend";
+import { useConfirm } from "../components/ui/useConfirm";
 import { useSubjectAssessmentData } from "../hooks/useAssessmentDefinitions";
 import { useClassById } from "../hooks/useClasses";
 import { useStudents } from "../hooks/useStudents";
@@ -24,6 +25,7 @@ import type {
 
 export const SubjectOverviewPage = () => {
   const toast = useToast();
+  const { confirm, confirmDialog } = useConfirm();
   const { classId: classIdParam, subjectId = "" } = useParams();
   const subjectQuery = useSubjectById(subjectId);
   const derivedClassId = classIdParam ?? subjectQuery.data?.class_id ?? "";
@@ -448,6 +450,18 @@ export const SubjectOverviewPage = () => {
                 }
                 onDeleteDefinition={async (definitionId) => {
                   setDeleteError(null);
+
+                  const confirmed = await confirm({
+                    title: "Leistungsnachweis löschen?",
+                    description:
+                      "Alle eingetragenen Ergebnisse dieses Nachweises werden entfernt. Direkt danach kannst du die Aktion über „Rückgängig“ wiederherstellen.",
+                    confirmLabel: "Nachweis löschen",
+                  });
+
+                  if (!confirmed) {
+                    return;
+                  }
+
                   try {
                     const snapshot = await matrixQuery.deleteDefinition.mutateAsync(definitionId);
                     toast.undoable("Leistungsnachweis gelöscht.", async () => {
@@ -455,12 +469,12 @@ export const SubjectOverviewPage = () => {
                       toast.success("Leistungsnachweis wurde wiederhergestellt.");
                     });
                   } catch (error) {
-                    const message = error instanceof Error
-                      ? error.message
-                      : "Leistungsnachweis konnte nicht gelöscht werden.";
+                    const message =
+                      error instanceof Error
+                        ? error.message
+                        : "Leistungsnachweis konnte nicht gelöscht werden.";
                     toast.error(message);
                     setDeleteError(message);
-                    throw error;
                   }
                 }}
               />
@@ -622,6 +636,7 @@ export const SubjectOverviewPage = () => {
           }
         }}
       />
+      {confirmDialog}
     </div>
   );
 };

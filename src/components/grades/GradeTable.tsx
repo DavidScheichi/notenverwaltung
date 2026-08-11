@@ -9,6 +9,7 @@ import type {
 } from "../../lib/supabase/types";
 import { useKeyboardNavigation } from "../../hooks/useKeyboardNavigation";
 import { useMatrixPaste } from "../../hooks/useMatrixPaste";
+import { Menu } from "../ui/Menu";
 import { GradeRow } from "./GradeRow";
 
 interface GradeMatrixProps {
@@ -30,6 +31,73 @@ interface GradeMatrixProps {
   onToggleInclude: (definitionId: string, includeInTotal: boolean) => void;
   onDeleteDefinition: (definitionId: string) => Promise<void>;
 }
+
+const DefinitionHeader = ({
+  definition,
+  classId,
+  subjectId,
+  typeLabelText,
+  showTypeBadge,
+  isActive,
+  onToggleInclude,
+  onDelete,
+}: {
+  definition: AssessmentDefinition;
+  classId: string;
+  subjectId: string;
+  typeLabelText: string;
+  showTypeBadge: boolean;
+  isActive: boolean;
+  onToggleInclude: (definitionId: string, includeInTotal: boolean) => void;
+  onDelete: () => void;
+}) => (
+  <th
+    scope="col"
+    className={`border-b border-line px-3 py-3 text-left align-top ${
+      isActive ? "bg-accent-soft/60" : "bg-surface"
+    }`}
+  >
+    <div className="flex items-start justify-between gap-1">
+      <div className="min-w-0">
+        <Link
+          to={`/classes/${classId}/subjects/${subjectId}/assessments/${definition.id}`}
+          className="block truncate text-sm font-semibold text-ink hover:text-accent-strong"
+          title={definition.name}
+        >
+          {definition.short_label || definition.name}
+        </Link>
+        <p className="mt-0.5 whitespace-nowrap text-[11px] text-ink-3">
+          {showTypeBadge ? `${typeLabelText} · ` : ""}
+          {definition.max_points !== null ? `max ${definition.max_points}` : "ohne Max"}
+          {definition.weight_multiplier !== 1 ? ` · ×${definition.weight_multiplier}` : ""}
+        </p>
+        {definition.include_in_total ? null : (
+          <span className="badge-neutral mt-1.5">zählt nicht</span>
+        )}
+      </div>
+      <Menu
+        align="right"
+        label={`Aktionen für ${definition.name}`}
+        items={[
+          {
+            kind: "link",
+            label: "Auswertung öffnen",
+            to: `/classes/${classId}/subjects/${subjectId}/assessments/${definition.id}`,
+          },
+          {
+            kind: "action",
+            label: definition.include_in_total
+              ? "Aus Gesamtrechnung nehmen"
+              : "In Gesamtrechnung aufnehmen",
+            onSelect: () => onToggleInclude(definition.id, !definition.include_in_total),
+          },
+          { kind: "separator" },
+          { kind: "action", label: "Nachweis löschen", tone: "danger", onSelect: onDelete },
+        ]}
+      />
+    </div>
+  </th>
+);
 
 export const GradeMatrix = ({
   classId,
@@ -100,24 +168,25 @@ export const GradeMatrix = ({
   return (
     <div className="space-y-2">
       {pasteInfo ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+        <div className="mx-5 mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
           {pasteInfo}
         </div>
       ) : null}
       {pasteError ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+        <div className="mx-5 mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
           {pasteError}
         </div>
       ) : null}
-      <div className="overflow-x-auto rounded-2xl border border-slate-200">
+
+      <div className="overflow-x-auto">
         <table className="min-w-full border-separate border-spacing-0 text-sm">
-          <thead className="sticky top-0 z-20 bg-white">
+          <thead className="sticky top-0 z-20 bg-surface">
             {hasGroupedHeader ? (
               <>
                 <tr>
                   <th
                     rowSpan={2}
-                    className="sticky left-0 z-30 border-b border-slate-200 bg-white px-4 py-3 text-left"
+                    className="sticky left-0 z-30 border-b border-line bg-surface px-4 py-3 text-left"
                   >
                     Schüler
                   </th>
@@ -125,28 +194,28 @@ export const GradeMatrix = ({
                     <th
                       key={`group-${group.typeId ?? "none"}-${group.label}`}
                       colSpan={group.definitions.length}
-                      className="border-b border-slate-200 bg-white px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-500"
+                      className="border-b border-line bg-surface px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.08em] text-ink-3"
                     >
                       {group.label}
                     </th>
                   ))}
                   <th
                     rowSpan={2}
-                    className="sticky z-30 border-b border-slate-200 bg-slate-50 px-4 py-3 text-left"
+                    className="sticky z-30 border-b border-line bg-sunken px-4 py-3 text-left"
                     style={{ right: 224, minWidth: 170 }}
                   >
                     Punkte
                   </th>
                   <th
                     rowSpan={2}
-                    className="sticky z-30 border-b border-slate-200 bg-slate-50 px-4 py-3 text-left"
+                    className="sticky z-30 border-b border-line bg-sunken px-4 py-3 text-left"
                     style={{ right: 112, minWidth: 112 }}
                   >
                     Prozent
                   </th>
                   <th
                     rowSpan={2}
-                    className="sticky right-0 z-30 border-b border-slate-200 bg-slate-50 px-4 py-3 text-left"
+                    className="sticky right-0 z-30 border-b border-line bg-sunken px-4 py-3 text-left"
                     style={{ minWidth: 112 }}
                   >
                     Note
@@ -154,135 +223,52 @@ export const GradeMatrix = ({
                 </tr>
                 <tr>
                   {definitions.map((definition, colIndex) => (
-                    <th
+                    <DefinitionHeader
                       key={definition.id}
-                      className={`border-b border-slate-200 bg-white px-4 py-3 text-left align-top ${
-                        colIndex === activeCell.col ? "bg-brand-50/40" : ""
-                      }`}
-                    >
-                      <div className="mb-2 flex items-center justify-between gap-2">
-                        <label className="flex items-center gap-1 text-[11px] font-medium text-slate-500">
-                          <input
-                            type="checkbox"
-                            checked={definition.include_in_total}
-                            onChange={(event) =>
-                              onToggleInclude(definition.id, event.target.checked)
-                            }
-                          />
-                          In Summe
-                        </label>
-                        <button
-                          type="button"
-                          className="rounded border border-rose-200 px-1.5 py-1 text-[11px] font-semibold text-rose-700 hover:bg-rose-50"
-                          onClick={async () => {
-                            const confirmed = window.confirm(
-                              "Diesen Leistungsnachweis wirklich löschen?\nAlle zugehörigen Ergebnisse werden entfernt.\nDu kannst die Aktion danach über „Rückgängig“ wiederherstellen.",
-                            );
-                            if (!confirmed) {
-                              return;
-                            }
-                            try {
-                              await onDeleteDefinition(definition.id);
-                            } catch {
-                              // Fehlerfeedback wird im Parent gesetzt.
-                            }
-                          }}
-                        >
-                          Löschen
-                        </button>
-                      </div>
-                      <Link
-                        to={`/classes/${classId}/subjects/${subjectId}/assessments/${definition.id}`}
-                        className="font-semibold text-brand-700"
-                      >
-                        {definition.short_label || definition.name}
-                      </Link>
-                      <div className="mt-1 text-xs text-slate-500">
-                        {definition.short_label ? `${definition.name} · ` : ""}
-                        {definition.max_points !== null ? `Max ${definition.max_points}` : "Ohne Max"} ·
-                        x{definition.weight_multiplier}
-                        {definition.include_in_total ? "" : " · exkl."}
-                      </div>
-                    </th>
+                      definition={definition}
+                      classId={classId}
+                      subjectId={subjectId}
+                      typeLabelText={typeLabel(definition.type_id)}
+                      showTypeBadge={false}
+                      isActive={colIndex === activeCell.col}
+                      onToggleInclude={onToggleInclude}
+                      onDelete={() => void onDeleteDefinition(definition.id)}
+                    />
                   ))}
                 </tr>
               </>
             ) : (
               <tr>
-                <th className="sticky left-0 z-30 border-b border-slate-200 bg-white px-4 py-3 text-left">
+                <th className="sticky left-0 z-30 border-b border-line bg-surface px-4 py-3 text-left">
                   Schüler
                 </th>
                 {definitions.map((definition, colIndex) => (
-                  <th
+                  <DefinitionHeader
                     key={definition.id}
-                    className={`border-b border-slate-200 bg-white px-4 py-3 text-left align-top ${
-                      colIndex === activeCell.col ? "bg-brand-50/40" : ""
-                    }`}
-                  >
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <span className="rounded-full border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600">
-                        {typeLabel(definition.type_id)}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <label className="flex items-center gap-1 text-[11px] font-medium text-slate-500">
-                          <input
-                            type="checkbox"
-                            checked={definition.include_in_total}
-                            onChange={(event) =>
-                              onToggleInclude(definition.id, event.target.checked)
-                            }
-                          />
-                          In Summe
-                        </label>
-                        <button
-                          type="button"
-                          className="rounded border border-rose-200 px-1.5 py-1 text-[11px] font-semibold text-rose-700 hover:bg-rose-50"
-                          onClick={async () => {
-                            const confirmed = window.confirm(
-                              "Diesen Leistungsnachweis wirklich löschen?\nAlle zugehörigen Ergebnisse werden entfernt.\nDu kannst die Aktion danach über „Rückgängig“ wiederherstellen.",
-                            );
-                            if (!confirmed) {
-                              return;
-                            }
-                            try {
-                              await onDeleteDefinition(definition.id);
-                            } catch {
-                              // Fehlerfeedback wird im Parent gesetzt.
-                            }
-                          }}
-                        >
-                          Löschen
-                        </button>
-                      </div>
-                    </div>
-                    <Link
-                      to={`/classes/${classId}/subjects/${subjectId}/assessments/${definition.id}`}
-                      className="font-semibold text-brand-700"
-                    >
-                      {definition.short_label || definition.name}
-                    </Link>
-                    <div className="mt-1 text-xs text-slate-500">
-                      {definition.short_label ? `${definition.name} · ` : ""}
-                      {definition.max_points !== null ? `Max ${definition.max_points}` : "Ohne Max"} ·
-                      x{definition.weight_multiplier}
-                      {definition.include_in_total ? "" : " · exkl."}
-                    </div>
-                  </th>
+                    definition={definition}
+                    classId={classId}
+                    subjectId={subjectId}
+                    typeLabelText={typeLabel(definition.type_id)}
+                    showTypeBadge
+                    isActive={colIndex === activeCell.col}
+                    onToggleInclude={onToggleInclude}
+                    onDelete={() => void onDeleteDefinition(definition.id)}
+                  />
                 ))}
                 <th
-                  className="sticky z-30 border-b border-slate-200 bg-slate-50 px-4 py-3 text-left"
+                  className="sticky z-30 border-b border-line bg-sunken px-4 py-3 text-left"
                   style={{ right: 224, minWidth: 170 }}
                 >
                   Punkte
                 </th>
                 <th
-                  className="sticky z-30 border-b border-slate-200 bg-slate-50 px-4 py-3 text-left"
+                  className="sticky z-30 border-b border-line bg-sunken px-4 py-3 text-left"
                   style={{ right: 112, minWidth: 112 }}
                 >
                   Prozent
                 </th>
                 <th
-                  className="sticky right-0 z-30 border-b border-slate-200 bg-slate-50 px-4 py-3 text-left"
+                  className="sticky right-0 z-30 border-b border-line bg-sunken px-4 py-3 text-left"
                   style={{ minWidth: 112 }}
                 >
                   Note
@@ -314,6 +300,11 @@ export const GradeMatrix = ({
           </tbody>
         </table>
       </div>
+
+      <p className="border-t border-line px-5 py-2.5 text-[13px] text-ink-3">
+        Enter bearbeiten · Pfeiltasten navigieren · Escape verwirft · Mehrere Werte aus einer
+        Tabelle in eine Spalte einfügen
+      </p>
     </div>
   );
 };

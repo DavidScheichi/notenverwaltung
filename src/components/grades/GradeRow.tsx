@@ -9,6 +9,7 @@ import type {
   StudentWithEnrollment,
 } from "../../lib/supabase/types";
 import { GradeCell } from "./GradeCell";
+import { GradeBadge } from "../ui/GradeBadge";
 
 interface GradeRowProps {
   rowIndex: number;
@@ -69,13 +70,17 @@ const GradeRowBase = ({
 
   return (
     <tr
-      className={`group hover:bg-slate-50/70 ${
-        activeRowIndex === rowIndex ? "bg-brand-50/30" : ""
+      className={`group ${rowIndex % 2 === 1 ? "bg-sunken/50" : ""} hover:bg-accent-soft/40 ${
+        activeRowIndex === rowIndex ? "bg-accent-soft/60" : ""
       }`}
     >
       <td
-        className={`sticky left-0 z-10 border-b border-slate-100 px-4 py-3 font-medium ${
-          activeRowIndex === rowIndex ? "bg-brand-50/30" : "bg-white group-hover:bg-slate-50/70"
+        className={`sticky left-0 z-10 border-b border-line px-4 py-2.5 font-medium text-ink ${
+          activeRowIndex === rowIndex
+            ? "bg-accent-soft"
+            : rowIndex % 2 === 1
+              ? "bg-sunken"
+              : "bg-surface"
         }`}
       >
         {student.first_name} {student.last_name}
@@ -116,7 +121,7 @@ const GradeRowBase = ({
         );
       })}
       <td
-        className="sticky z-10 border-b border-slate-100 bg-slate-50 px-4 py-3"
+        className="sticky z-10 border-b border-line bg-sunken px-4 py-2.5 tabular-nums"
         style={{ right: 224, minWidth: 170 }}
       >
         {totals.maxWeighted > 0
@@ -124,16 +129,16 @@ const GradeRowBase = ({
           : "—"}
       </td>
       <td
-        className="sticky z-10 border-b border-slate-100 bg-slate-50 px-4 py-3"
+        className="sticky z-10 border-b border-line bg-sunken px-4 py-2.5 tabular-nums"
         style={{ right: 112, minWidth: 112 }}
       >
         {totals.percent === null ? "—" : `${totals.percent.toFixed(1)} %`}
       </td>
       <td
-        className="sticky right-0 z-10 border-b border-slate-100 bg-slate-50 px-4 py-3"
+        className="sticky right-0 z-10 border-b border-line bg-sunken px-4 py-2.5"
         style={{ minWidth: 112 }}
       >
-        {finalGrade ?? "—"}
+        <GradeBadge grade={finalGrade} />
       </td>
     </tr>
   );

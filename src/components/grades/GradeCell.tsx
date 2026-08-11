@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import type { AssessmentDefinition, AssessmentResultStatus } from "../../lib/supabase/types";
+import { STATUS_META, STATUS_OPTIONS } from "../ui/statusMeta";
 
 interface GradeCellProps {
   rowIndex: number;
@@ -32,24 +33,6 @@ interface GradeCellProps {
     mode: "points" | "grade";
   }) => void;
 }
-
-const statusOptions: Array<{ value: AssessmentResultStatus; label: string }> = [
-  { value: "filled", label: "Eingetragen" },
-  { value: "missing", label: "Fehlt" },
-  { value: "excused", label: "Entschuldigt" },
-  { value: "absent_unexcused", label: "Unentschuldigt" },
-  { value: "makeup_pending", label: "Nachtrag offen" },
-  { value: "exempt", label: "Befreit" },
-];
-
-const statusSymbols: Record<AssessmentResultStatus, string> = {
-  filled: "",
-  missing: "—",
-  excused: "E",
-  absent_unexcused: "U",
-  makeup_pending: "N",
-  exempt: "B",
-};
 
 const parsePoints = (value: string) => {
   const trimmed = value.trim();
@@ -128,7 +111,7 @@ const GradeCellBase = ({
 
   const valueLabel = useMemo(() => {
     if (status && status !== "filled") {
-      return statusSymbols[status];
+      return STATUS_META[status].symbol;
     }
     if (points !== null) {
       return String(points);
@@ -143,27 +126,15 @@ const GradeCellBase = ({
   }, [grade, points, showDirectGrades, status]);
 
   const valueClassName = useMemo(() => {
-    if (!status && points === null && grade === null) {
-      return "text-slate-400";
+    if (status && status !== "filled") {
+      return STATUS_META[status].textClass;
     }
 
-    if (status === "excused" || status === "exempt") {
-      return "font-semibold text-amber-700";
+    if (points === null && grade === null) {
+      return "text-ink-3";
     }
 
-    if (status === "absent_unexcused") {
-      return "font-semibold text-rose-700";
-    }
-
-    if (status === "makeup_pending") {
-      return "font-semibold text-indigo-700";
-    }
-
-    if (status === "missing") {
-      return "font-semibold text-slate-500";
-    }
-
-    return "text-slate-700";
+    return "text-ink";
   }, [grade, points, status]);
 
   const buildPayload = () => {
@@ -265,7 +236,7 @@ const GradeCellBase = ({
       <button
         type="button"
         ref={(element) => registerCell(rowIndex, columnIndex, element)}
-        className={`h-10 min-w-24 rounded-lg border border-transparent px-2 text-left text-sm outline-none transition hover:border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 ${valueClassName}`}
+        className={`h-9 w-full rounded-md border border-transparent px-2 text-left text-sm tabular-nums outline-none transition hover:border-line-strong hover:bg-surface focus:border-accent focus:ring-2 focus:ring-accent-ring ${valueClassName}`}
         onFocus={() => {
           onActivate(rowIndex, columnIndex);
         }}
@@ -292,10 +263,8 @@ const GradeCellBase = ({
   return (
     <div
       ref={containerRef}
-      className={`min-w-28 rounded-lg border p-1 ${
-        saveError
-          ? "border-rose-300 bg-rose-50/70"
-          : "border-brand-200 bg-brand-50/40"
+      className={`min-w-32 space-y-1 rounded-md border p-1.5 ${
+        saveError ? "border-rose-300 bg-rose-50" : "border-accent bg-accent-soft"
       }`}
       onBlur={(event) => {
         if (containerRef.current?.contains(event.relatedTarget as Node | null)) {
@@ -336,7 +305,7 @@ const GradeCellBase = ({
           onCellKeyDown(event, rowIndex, columnIndex);
         }}
       >
-        {statusOptions.map((option) => (
+        {STATUS_OPTIONS.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
           </option>
@@ -519,13 +488,15 @@ const GradeCellBase = ({
           )}
         </div>
       ) : null}
-      {saveError ? (
-        <p className="mt-1 text-xs font-medium text-rose-700">Fehler beim Speichern</p>
-      ) : saveState === "saving" ? (
-        <p className="mt-1 text-xs text-slate-500">Speichert…</p>
-      ) : saveState === "saved" ? (
-        <p className="mt-1 text-xs text-emerald-700">Gespeichert</p>
-      ) : null}
+      <p className="min-h-4 text-[11px] leading-4">
+        {saveError ? (
+          <span className="font-medium text-rose-700">Nicht gespeichert</span>
+        ) : saveState === "saving" ? (
+          <span className="text-ink-3">Speichert…</span>
+        ) : saveState === "saved" ? (
+          <span className="text-emerald-700">✓ Gespeichert</span>
+        ) : null}
+      </p>
     </div>
   );
 };
