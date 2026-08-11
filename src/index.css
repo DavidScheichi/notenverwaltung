@@ -3,39 +3,178 @@
 @tailwind utilities;
 
 :root {
-  font-family: Inter, "Segoe UI", sans-serif;
-  color: #0f172a;
-  background:
-    radial-gradient(circle at top left, rgba(37, 99, 235, 0.2), transparent 35%),
-    linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+  --c-canvas: 246 247 251;
+  --c-surface: 255 255 255;
+  --c-sunken: 248 250 252;
+  --c-line: 226 232 240;
+  --c-line-strong: 203 213 225;
+  --c-ink: 15 23 42;
+  --c-ink-2: 71 85 105;
+  --c-ink-3: 100 116 139;
+  --c-accent: 37 99 235;
+  --c-accent-soft: 239 246 255;
+  --c-accent-strong: 29 78 216;
+  --c-accent-ring: 191 219 254;
+
+  color-scheme: light;
 }
 
-body {
-  min-height: 100vh;
-}
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
 
-#root {
-  min-height: 100vh;
+  body {
+    @apply min-h-screen bg-canvas font-sans text-ink antialiased;
+  }
+
+  #root {
+    @apply min-h-screen;
+  }
+
+  h1, h2, h3 {
+    @apply tracking-tight;
+  }
+
+  ::selection {
+    @apply bg-accent-soft text-accent-strong;
+  }
 }
 
 @layer components {
-  .panel {
-    @apply rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-panel backdrop-blur;
+  /* Flächen */
+  .card {
+    @apply rounded-2xl border border-line bg-surface;
+  }
+
+  .card-raised {
+    @apply rounded-2xl border border-line bg-surface shadow-card;
+  }
+
+  .card-pad {
+    @apply p-5;
+  }
+
+  /* Buttons */
+  .btn {
+    @apply inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-55;
+  }
+
+  .btn-primary {
+    @apply btn bg-accent text-white hover:bg-accent-strong;
+  }
+
+  .btn-secondary {
+    @apply btn border border-line-strong bg-surface text-ink-2 hover:bg-sunken hover:text-ink;
+  }
+
+  .btn-ghost {
+    @apply btn text-ink-2 hover:bg-sunken hover:text-ink;
+  }
+
+  .btn-danger {
+    @apply btn bg-rose-600 text-white hover:bg-rose-700 focus-visible:ring-rose-200;
+  }
+
+  .btn-sm {
+    @apply h-8 gap-1.5 px-3 text-[13px];
+  }
+
+  .btn-icon {
+    @apply h-9 w-9 px-0;
+  }
+
+  /* Formular */
+  .label {
+    @apply block text-sm font-medium text-ink-2;
+  }
+
+  .hint {
+    @apply text-[13px] leading-snug text-ink-3;
   }
 
   .field {
-    @apply w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100;
+    @apply w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink outline-none transition placeholder:text-ink-3 focus:border-accent focus:ring-2 focus:ring-accent-ring;
+  }
+
+  .field-error {
+    @apply border-rose-400 focus:border-rose-500 focus:ring-rose-100;
+  }
+
+  /* Badges und Chips */
+  .badge-neutral {
+    @apply inline-flex items-center gap-1 rounded-full border border-line bg-sunken px-2.5 py-0.5 text-xs font-semibold text-ink-2;
+  }
+
+  .badge-accent {
+    @apply inline-flex items-center gap-1 rounded-full border border-accent-ring bg-accent-soft px-2.5 py-0.5 text-xs font-semibold text-accent-strong;
+  }
+
+  .chip {
+    @apply inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line-strong bg-surface px-3 py-1.5 text-sm font-medium text-ink-2 transition hover:bg-sunken hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring;
+  }
+
+  .chip-active {
+    @apply border-accent bg-accent-soft text-accent-strong hover:bg-accent-soft hover:text-accent-strong;
+  }
+
+  /* Tabs */
+  .tab {
+    @apply relative -mb-px whitespace-nowrap border-b-2 border-transparent px-1 pb-3 text-sm font-medium text-ink-3 transition hover:text-ink focus-visible:outline-none focus-visible:text-ink;
+  }
+
+  .tab-active {
+    @apply border-accent text-ink;
+  }
+
+  /* Noten */
+  .grade-badge {
+    @apply inline-flex h-7 min-w-[1.75rem] items-center justify-center rounded-md border px-1.5 text-sm font-bold tabular-nums;
+  }
+
+  .grade-1 {
+    @apply border-emerald-200 bg-emerald-50 text-emerald-700;
+  }
+
+  .grade-2 {
+    @apply border-lime-200 bg-lime-50 text-lime-700;
+  }
+
+  .grade-3 {
+    @apply border-yellow-200 bg-yellow-50 text-yellow-700;
+  }
+
+  .grade-4 {
+    @apply border-orange-200 bg-orange-50 text-orange-700;
+  }
+
+  .grade-5 {
+    @apply border-rose-200 bg-rose-50 text-rose-700;
+  }
+
+  .grade-none {
+    @apply border-line bg-sunken text-ink-3;
+  }
+
+  /* Listen */
+  .row-hover {
+    @apply transition hover:bg-sunken;
+  }
+
+  /* Legacy-Aliase — bestehende Aufrufe bleiben lauffähig, bis die Seiten umgestellt sind */
+  .panel {
+    @apply card-raised card-pad;
   }
 
   .button-primary {
-    @apply inline-flex h-10 items-center justify-center rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white transition hover:bg-brand-900 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply btn-primary;
   }
 
   .button-secondary {
-    @apply inline-flex h-10 items-center justify-center rounded-xl border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply btn-secondary;
   }
 
   .button-danger {
-    @apply inline-flex h-10 items-center justify-center rounded-xl border border-rose-300 px-4 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply btn border border-rose-200 bg-surface text-rose-700 hover:bg-rose-50;
   }
 }
