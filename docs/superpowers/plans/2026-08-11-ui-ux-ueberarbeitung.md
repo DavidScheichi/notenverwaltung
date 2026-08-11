@@ -2948,7 +2948,32 @@ Das linke Inline-Formular entfällt; stattdessen Liste plus Dialog:
       ) : null}
 ```
 
-`handleDeleteSubject` analog zu Task 9 Step 3 ergänzen, aber mit `subjectsQuery.deleteSubject` und `subjectsQuery.restoreDeletedSubject`.
+`handleDeleteSubject` oberhalb des `return` ergänzen:
+
+```tsx
+  const handleDeleteSubject = async (subjectId: string, subjectName: string) => {
+    const confirmed = await confirm({
+      title: `„${subjectName}" löschen?`,
+      description:
+        "Alle Leistungsnachweise und eingetragenen Ergebnisse dieses Fachs werden entfernt. Direkt danach kannst du die Aktion über „Rückgängig" wiederherstellen.",
+      confirmLabel: "Fach löschen",
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const snapshot = await subjectsQuery.deleteSubject.mutateAsync(subjectId);
+      toast.undoable("Fach gelöscht.", async () => {
+        await subjectsQuery.restoreDeletedSubject.mutateAsync(snapshot);
+        toast.success("Fach wurde wiederhergestellt.");
+      });
+    } catch {
+      toast.error("Fach konnte nicht gelöscht werden.");
+    }
+  };
+```
 
 Der Fach-Dialog (außerhalb der Tab-Zweige, vor `{confirmDialog}`):
 
