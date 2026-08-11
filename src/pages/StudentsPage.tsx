@@ -3,7 +3,13 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { EmptyState } from "../components/ui/EmptyState";
 import { ErrorState } from "../components/ui/ErrorState";
+import { Field } from "../components/ui/Field";
+import { GradeBadge } from "../components/ui/GradeBadge";
+import { Menu } from "../components/ui/Menu";
+import { Modal } from "../components/ui/Modal";
+import { PageHeader } from "../components/ui/PageHeader";
 import { useToast } from "../components/ui/ToastProvider";
+import { useConfirm } from "../components/ui/useConfirm";
 import { useClasses } from "../hooks/useClasses";
 import { useAllStudents, useStudents } from "../hooks/useStudents";
 import { useAllSubjects } from "../hooks/useSubjects";
@@ -13,11 +19,17 @@ import {
   resolveGradeBoundaries,
 } from "../lib/subjectOverview";
 import { supabase } from "../lib/supabase/client";
-import type { AssessmentDefinition, AssessmentResult, GradeBoundary } from "../lib/supabase/types";
+import type {
+  AssessmentDefinition,
+  AssessmentResult,
+  GradeBoundary,
+  StudentWithEnrollment,
+} from "../lib/supabase/types";
 import { studentSchema } from "../schemas/students";
 
 export const StudentsPage = () => {
   const toast = useToast();
+  const { confirm, confirmDialog } = useConfirm();
   const classesQuery = useClasses();
   const studentsQuery = useAllStudents();
   const studentActions = useStudents();
@@ -142,79 +154,245 @@ export const StudentsPage = () => {
       return matchesSearch && matchesClass;
     });
   }, [classFilter, search, studentsQuery.data]);
-  const hasStudents = (studentsQuery.data ?? []).length > 0;
+  const hasFilters = Boolean(search || classFilter);
 
   const getClassName = (classId?: string) =>
     classesQuery.data?.find((item) => item.id === classId)?.name ?? "Keine Klasse";
 
+  const handleCreateStudent = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setCreateError(null);
+
+    if (!studentForm.classId) {
+      setCreateError("Bitte zuerst eine Klasse auswählen.");
+      return;
+    }
+
+    const result = studentSchema.safeParse({
+      first_name: studentForm.first_name,
+      last_name: studentForm.last_name,
+      notes: studentForm.notes,
+    });
+
+    if (!result.success) {
+      setCreateError(result.error.issues[0]?.message ?? "Bitte Eingaben prüfen.");
+      return;
+    }
+
+    try {
+      await studentActions.createStudent.mutateAsync({
+        ...result.data,
+        classId: studentForm.classId,
+      });
+      toast.success("Schüler wurde erstellt.");
+      setStudentForm({
+        classId: "",
+        first_name: "",
+        last_name: "",
+        notes: "",
+      });
+      setIsCreateOpen(false);
+    } catch (error) {
+      toast.error("Schüler konnte nicht angelegt werden.");
+      setCreateError(
+        error instanceof Error ? error.message : "Schüler konnte nicht angelegt werden.",
+      );
+    }
+  };
+
+  const handleDeleteStudent = async (student: StudentWithEnrollment) => {
+    setDeleteError(null);
+
+    const confirmed = await confirm({
+      title: `${student.first_name} ${student.last_name} löschen?`,
+      description:
+        "Alle Ergebnisse dieses Schülers werden entfernt. Direkt danach kannst du die Aktion über „Rückgängig\" wiederherstellen.",
+      confirmLabel: "Schüler löschen",
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const snapshot = await studentActions.deleteStudent.mutateAsync(student.id);
+      toast.undoable("Schüler gelöscht.", async () => {
+        await studentActions.restoreDeletedStudent.mutateAsync(snapshot);
+        toast.success("Schüler wurde wiederhergestellt.");
+      });
+    } catch (error) {
+      toast.error("Schüler konnte nicht gelöscht werden.");
+      setDeleteError(
+        error instanceof Error ? error.message : "Schüler konnte nicht gelöscht werden.",
+      );
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      <section className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <p className="text-sm font-medium text-slate-500">Schülerverwaltung</p>
-          <h2 className="text-2xl font-semibold text-slate-900">Schüler</h2>
+    <>
+      <PageHeader
+        title="Schüler"
+        description="Alle Schüler über deine Klassen hinweg."
+        stats={[{ label: "Schüler", value: studentsQuery.data?.length ?? 0 }]}
+        actions={
+          <button type="button" className="btn-primary" onClick={() => setIsCreateOpen(true)}>
+            Schüler hinzufügen
+          </button>
+        }
+      />
+
+      <section className="card p-4">
+        <div className="grid gap-3 sm:grid-cols-[1fr_220px]">
+          <Field label="Suche" htmlFor="student-search">
+            <input
+              id="student-search"
+              className="field"
+              placeholder="Name suchen"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </Field>
+          <Field label="Klasse" htmlFor="student-class-filter">
+            <select
+              id="student-class-filter"
+              className="field"
+              value={classFilter}
+              onChange={(event) => setClassFilter(event.target.value)}
+            >
+              <option value="">Alle Klassen</option>
+              {classesQuery.data?.map((schoolClass) => (
+                <option key={schoolClass.id} value={schoolClass.id}>
+                  {schoolClass.name}
+                </option>
+              ))}
+            </select>
+          </Field>
         </div>
-        <button
-          type="button"
-          className="button-primary"
-          onClick={() => setIsCreateOpen((value) => !value)}
-        >
-          + Schüler hinzufügen
-        </button>
+        {hasFilters ? (
+          <div className="mt-3 flex items-center justify-between gap-3 border-t border-line pt-3">
+            <p className="text-[13px] text-ink-3">
+              {filteredStudents.length} von {studentsQuery.data?.length ?? 0} Schülern
+            </p>
+            <button
+              type="button"
+              className="btn-ghost btn-sm"
+              onClick={() => {
+                setSearch("");
+                setClassFilter("");
+              }}
+            >
+              Filter zurücksetzen
+            </button>
+          </div>
+        ) : null}
       </section>
 
-      {isCreateOpen ? (
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-900">Schüler hinzufügen</h3>
-          <p className="mt-1 text-sm text-slate-500">
-            Klasse wählen und den Schüler direkt anlegen.
-          </p>
-          <form
-            className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4"
-            onSubmit={async (event) => {
-              event.preventDefault();
-              setCreateError(null);
+      {deleteError ? <ErrorState message={deleteError} /> : null}
 
-              if (!studentForm.classId) {
-                setCreateError("Bitte zuerst eine Klasse auswählen.");
-                return;
-              }
+      {studentsQuery.error ? (
+        <ErrorState message={studentsQuery.error.message} />
+      ) : summaryQuery.error ? (
+        <ErrorState message={summaryQuery.error.message} />
+      ) : filteredStudents.length === 0 ? (
+        <EmptyState
+          title={hasFilters ? "Keine Suchergebnisse" : "Keine Schüler vorhanden"}
+          description={
+            hasFilters
+              ? "Passe Suche oder Klassenfilter an, um passende Schüler zu sehen."
+              : "Lege den ersten Schüler an, um mit der Verwaltung zu starten."
+          }
+          actionLabel={hasFilters ? undefined : "Schüler hinzufügen"}
+          onAction={hasFilters ? undefined : () => setIsCreateOpen(true)}
+        />
+      ) : (
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {filteredStudents.map((student) => {
+            const classId = student.enrollments[0]?.class_id;
+            const initials = `${student.first_name[0] ?? ""}${student.last_name[0] ?? ""}`;
+            const average = averageMap.get(student.id);
 
-              const result = studentSchema.safeParse({
-                first_name: studentForm.first_name,
-                last_name: studentForm.last_name,
-                notes: studentForm.notes,
-              });
+            return (
+              <article key={student.id} className="card-raised group relative p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span
+                      aria-hidden="true"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink text-xs font-bold text-white"
+                    >
+                      {initials.toUpperCase()}
+                    </span>
+                    <div className="min-w-0">
+                      <Link
+                        to={`/students/${student.id}`}
+                        className="block truncate text-base font-semibold text-ink after:absolute after:inset-0 after:content-[''] hover:text-accent-strong"
+                      >
+                        {student.first_name} {student.last_name}
+                      </Link>
+                      <p className="mt-0.5 text-[13px] text-ink-3">{getClassName(classId)}</p>
+                    </div>
+                  </div>
+                  <div className="relative z-10 shrink-0">
+                    <Menu
+                      items={[
+                        { kind: "link", label: "Details öffnen", to: `/students/${student.id}` },
+                        { kind: "separator" },
+                        {
+                          kind: "action",
+                          label: "Schüler löschen",
+                          tone: "danger",
+                          onSelect: () => void handleDeleteStudent(student),
+                        },
+                      ]}
+                    />
+                  </div>
+                </div>
 
-              if (!result.success) {
-                setCreateError(result.error.issues[0]?.message ?? "Bitte Eingaben prüfen.");
-                return;
-              }
+                <div className="mt-4 flex items-center justify-between border-t border-line pt-3">
+                  <span className="text-[13px] text-ink-3">Notendurchschnitt</span>
+                  <GradeBadge grade={average ?? null} fallback="—" />
+                </div>
+              </article>
+            );
+          })}
+        </section>
+      )}
 
-              try {
-                await studentActions.createStudent.mutateAsync({
-                  ...result.data,
-                  classId: studentForm.classId,
-                });
-                toast.success("Schüler wurde erstellt.");
-                setStudentForm({
-                  classId: "",
-                  first_name: "",
-                  last_name: "",
-                  notes: "",
-                });
+      <Modal
+        isOpen={isCreateOpen}
+        onClose={() => {
+          setIsCreateOpen(false);
+          setCreateError(null);
+        }}
+        title="Schüler hinzufügen"
+        description="Klasse wählen und den Schüler direkt anlegen."
+        size="md"
+        footer={
+          <>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => {
                 setIsCreateOpen(false);
-              } catch (error) {
-                toast.error("Schüler konnte nicht angelegt werden.");
-                setCreateError(
-                  error instanceof Error
-                    ? error.message
-                    : "Schüler konnte nicht angelegt werden.",
-                );
-              }
-            }}
-          >
+                setCreateError(null);
+              }}
+            >
+              Abbrechen
+            </button>
+            <button
+              type="submit"
+              form="student-create-form"
+              className="btn-primary"
+              disabled={studentActions.createStudent.isPending}
+            >
+              {studentActions.createStudent.isPending ? "Wird gespeichert..." : "Speichern"}
+            </button>
+          </>
+        }
+      >
+        <form id="student-create-form" className="space-y-4" onSubmit={handleCreateStudent}>
+          <Field label="Klasse" htmlFor="student-class">
             <select
+              id="student-class"
               className="field"
               value={studentForm.classId}
               onChange={(event) =>
@@ -228,146 +406,47 @@ export const StudentsPage = () => {
                 </option>
               ))}
             </select>
-            <input
-              className="field"
-              placeholder="Vorname"
-              value={studentForm.first_name}
-              onChange={(event) =>
-                setStudentForm((prev) => ({ ...prev, first_name: event.target.value }))
-              }
-            />
-            <input
-              className="field"
-              placeholder="Nachname"
-              value={studentForm.last_name}
-              onChange={(event) =>
-                setStudentForm((prev) => ({ ...prev, last_name: event.target.value }))
-              }
-            />
-            <button type="submit" className="button-primary" disabled={studentActions.createStudent.isPending}>
-              {studentActions.createStudent.isPending ? "Wird gespeichert..." : "Speichern"}
-            </button>
+          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Vorname" htmlFor="student-first-name">
+              <input
+                id="student-first-name"
+                className="field"
+                placeholder="Vorname"
+                value={studentForm.first_name}
+                onChange={(event) =>
+                  setStudentForm((prev) => ({ ...prev, first_name: event.target.value }))
+                }
+              />
+            </Field>
+            <Field label="Nachname" htmlFor="student-last-name">
+              <input
+                id="student-last-name"
+                className="field"
+                placeholder="Nachname"
+                value={studentForm.last_name}
+                onChange={(event) =>
+                  setStudentForm((prev) => ({ ...prev, last_name: event.target.value }))
+                }
+              />
+            </Field>
+          </div>
+          <Field label="Notiz (optional)" htmlFor="student-notes">
             <textarea
-              className="field min-h-24 md:col-span-2 xl:col-span-4"
-              placeholder="Notiz (optional)"
+              id="student-notes"
+              className="field min-h-24"
+              placeholder="Notiz"
               value={studentForm.notes}
               onChange={(event) =>
                 setStudentForm((prev) => ({ ...prev, notes: event.target.value }))
               }
             />
-          </form>
-          {createError ? <div className="mt-3"><ErrorState message={createError} /></div> : null}
-        </section>
-      ) : null}
+          </Field>
+          {createError ? <ErrorState message={createError} /> : null}
+        </form>
+      </Modal>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="grid gap-3 md:grid-cols-[1fr_220px]">
-          <input
-            className="field"
-            placeholder="Schüler suchen"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-          <select
-            className="field"
-            value={classFilter}
-            onChange={(event) => setClassFilter(event.target.value)}
-          >
-            <option value="">Alle Klassen</option>
-            {classesQuery.data?.map((schoolClass) => (
-              <option key={schoolClass.id} value={schoolClass.id}>
-                {schoolClass.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </section>
-
-      {studentsQuery.error ? <ErrorState message={studentsQuery.error.message} /> : null}
-      {summaryQuery.error ? <ErrorState message={summaryQuery.error.message} /> : null}
-      {deleteError ? <ErrorState message={deleteError} /> : null}
-
-      {filteredStudents.length === 0 ? (
-        <EmptyState
-          title={hasStudents ? "Keine Suchergebnisse" : "Keine Schüler vorhanden"}
-          description={
-            hasStudents
-              ? "Passe Suche oder Klassenfilter an, um passende Schüler zu sehen."
-              : "Lege den ersten Schüler an, um mit der Verwaltung zu starten."
-          }
-          actionLabel="+ Schüler hinzufügen"
-          onAction={() => setIsCreateOpen(true)}
-        />
-      ) : (
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {filteredStudents.map((student) => {
-            const classId = student.enrollments[0]?.class_id;
-            const initials = `${student.first_name[0] ?? ""}${student.last_name[0] ?? ""}`;
-            const average = averageMap.get(student.id);
-
-            return (
-              <Link
-                key={student.id}
-                to={`/students/${student.id}`}
-                className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-brand-500 hover:shadow-md"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-sm font-semibold text-white">
-                    {initials.toUpperCase()}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">
-                      {getClassName(classId)}
-                    </span>
-                    <button
-                      type="button"
-                      className="rounded-lg border border-rose-200 px-2 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-50"
-                      onClick={async (event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        setDeleteError(null);
-                        const confirmed = window.confirm(
-                          "Diesen Schüler wirklich löschen?\nAlle zugehörigen Ergebnisse werden entfernt.\nDu kannst die Aktion danach über „Rückgängig“ wiederherstellen.",
-                        );
-                        if (!confirmed) {
-                          return;
-                        }
-
-                        try {
-                          const snapshot = await studentActions.deleteStudent.mutateAsync(student.id);
-                          toast.undoable("Schüler gelöscht.", async () => {
-                            await studentActions.restoreDeletedStudent.mutateAsync(snapshot);
-                            toast.success("Schüler wurde wiederhergestellt.");
-                          });
-                        } catch (error) {
-                          toast.error("Schüler konnte nicht gelöscht werden.");
-                          setDeleteError(
-                            error instanceof Error
-                              ? error.message
-                              : "Schüler konnte nicht gelöscht werden.",
-                          );
-                        }
-                      }}
-                    >
-                      Löschen
-                    </button>
-                  </div>
-                </div>
-                <h3 className="mt-4 text-lg font-semibold text-slate-900">
-                  {student.first_name} {student.last_name}
-                </h3>
-                {average !== undefined ? (
-                  <p className="mt-2 text-sm text-slate-500">
-                    Durchschnitt: <span className="font-semibold text-slate-900">{average.toFixed(2)}</span>
-                  </p>
-                ) : (
-                  <p className="mt-2 text-sm text-slate-400">Noch keine Notendaten</p>
-                )}
-              </Link>
-            );
-          })}
-        </section>
-      )}
-    </div>
+      {confirmDialog}
+    </>
   );
 };
