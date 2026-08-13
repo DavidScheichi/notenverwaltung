@@ -213,6 +213,7 @@ export const ClassDetailPage = () => {
       await fundQuery.createEntry.mutateAsync({
         teacher_id: currentTeacherId,
         class_id: classId,
+        student_id: null,
         entry_type: result.data.entry_type,
         amount: result.data.amount,
         entry_date: result.data.entry_date,

@@ -71,6 +71,7 @@ export interface ClassFundEntry {
   id: string;
   teacher_id: string;
   class_id: string;
+  student_id: string | null;
   entry_type: FundEntryType;
   amount: number;
   entry_date: string;
