@@ -517,7 +517,7 @@ export const ClassDetailPage = () => {
             </button>
           </div>
 
-          {studentTotals.length > 0 ? (
+          {studentTotals.length > 0 && !fundQuery.isLoading && !fundQuery.error ? (
             <div className="border-b border-line px-5 py-4">
               <h3 className="text-[13px] font-semibold uppercase tracking-wide text-ink-3">
                 Einzahlungen pro Schüler

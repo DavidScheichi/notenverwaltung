@@ -11,6 +11,7 @@ interface DeletedStudentSnapshot {
   student: Student | null;
   enrollments: Enrollment[];
   results: AssessmentResult[];
+  fundEntryIds: string[];
 }
 
 const normalizeStudent = (student: unknown): StudentWithEnrollment => {
@@ -151,10 +152,20 @@ export const useStudents = (classId?: string) => {
         throw resultsLoadError;
       }
 
+      const { data: fundEntriesData, error: fundEntriesLoadError } = await supabase
+        .from("class_fund_entries")
+        .select("id")
+        .eq("student_id", studentId);
+
+      if (fundEntriesLoadError) {
+        throw fundEntriesLoadError;
+      }
+
       const snapshot: DeletedStudentSnapshot = {
         student: (studentData as Student | null) ?? null,
         enrollments: (enrollmentsData ?? []) as Enrollment[],
         results: (resultsData ?? []) as AssessmentResult[],
+        fundEntryIds: (fundEntriesData ?? []).map((entry) => entry.id as string),
       };
 
       const { error: resultsError } = await supabase
@@ -188,6 +199,7 @@ export const useStudents = (classId?: string) => {
       queryClient.invalidateQueries({ queryKey: ["student"] });
       queryClient.invalidateQueries({ queryKey: ["student-assessment-overview"] });
       queryClient.invalidateQueries({ queryKey: ["subject-assessment-data"] });
+      queryClient.invalidateQueries({ queryKey: ["class-fund"] });
     },
   });
 
@@ -221,12 +233,23 @@ export const useStudents = (classId?: string) => {
           throw resultsError;
         }
       }
+
+      if (snapshot.fundEntryIds.length > 0) {
+        const { error: fundEntriesError } = await supabase
+          .from("class_fund_entries")
+          .update({ student_id: snapshot.student.id })
+          .in("id", snapshot.fundEntryIds);
+        if (fundEntriesError) {
+          throw fundEntriesError;
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["students"] });
       queryClient.invalidateQueries({ queryKey: ["student"] });
       queryClient.invalidateQueries({ queryKey: ["student-assessment-overview"] });
       queryClient.invalidateQueries({ queryKey: ["subject-assessment-data"] });
+      queryClient.invalidateQueries({ queryKey: ["class-fund"] });
     },
   });
 
