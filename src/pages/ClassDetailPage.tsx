@@ -89,6 +89,19 @@ export const ClassDetailPage = () => {
     [fundQuery.data],
   );
 
+  const studentTotals = useMemo(() => {
+    const totals = new Map<string, number>();
+    for (const entry of fundQuery.data ?? []) {
+      if (entry.entry_type === "deposit" && entry.student_id) {
+        totals.set(entry.student_id, (totals.get(entry.student_id) ?? 0) + entry.amount);
+      }
+    }
+    return (studentsQuery.data ?? []).map((student) => ({
+      student,
+      total: totals.get(student.id) ?? 0,
+    }));
+  }, [fundQuery.data, studentsQuery.data]);
+
   const handleDeleteStudent = async (studentId: string, studentName: string) => {
     const confirmed = await confirm({
       title: `${studentName} löschen?`,
@@ -504,6 +517,29 @@ export const ClassDetailPage = () => {
             </button>
           </div>
 
+          {studentTotals.length > 0 ? (
+            <div className="border-b border-line px-5 py-4">
+              <h3 className="text-[13px] font-semibold uppercase tracking-wide text-ink-3">
+                Einzahlungen pro Schüler
+              </h3>
+              <div className="mt-2 divide-y divide-line">
+                {studentTotals.map(({ student, total }) => (
+                  <div
+                    key={student.id}
+                    className="flex items-center justify-between gap-4 py-2 text-sm"
+                  >
+                    <span className="text-ink">
+                      {student.first_name} {student.last_name}
+                    </span>
+                    <span className="font-semibold tabular-nums text-ink">
+                      {formatCurrency(total)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           {fundQuery.error ? (
             <div className="p-5">
               <ErrorState message={fundQuery.error.message} />
@@ -521,40 +557,46 @@ export const ClassDetailPage = () => {
             </div>
           ) : (
             <div className="divide-y divide-line">
-              {fundQuery.data?.map((entry) => (
-                <div key={entry.id} className="flex items-center justify-between gap-4 px-5 py-3.5">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-ink">
-                      {entry.entry_type === "deposit" ? "Einzahlung" : "Auszahlung"}
-                    </p>
-                    <p className="mt-0.5 truncate text-[13px] text-ink-3">
-                      {formatDate(entry.entry_date)}
-                      {entry.note ? ` · ${entry.note}` : ""}
-                    </p>
+              {fundQuery.data?.map((entry) => {
+                const entryStudent = entry.student_id
+                  ? (studentsQuery.data ?? []).find((student) => student.id === entry.student_id)
+                  : undefined;
+                return (
+                  <div key={entry.id} className="flex items-center justify-between gap-4 px-5 py-3.5">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-ink">
+                        {entry.entry_type === "deposit" ? "Einzahlung" : "Auszahlung"}
+                        {entryStudent ? ` · ${entryStudent.first_name} ${entryStudent.last_name}` : ""}
+                      </p>
+                      <p className="mt-0.5 truncate text-[13px] text-ink-3">
+                        {formatDate(entry.entry_date)}
+                        {entry.note ? ` · ${entry.note}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <span
+                        className={`text-sm font-semibold tabular-nums ${
+                          entry.entry_type === "deposit" ? "text-emerald-700" : "text-rose-700"
+                        }`}
+                      >
+                        {formatCurrency(
+                          entry.entry_type === "deposit" ? entry.amount : -entry.amount,
+                        )}
+                      </span>
+                      <Menu
+                        items={[
+                          {
+                            kind: "action",
+                            label: "Buchung löschen",
+                            tone: "danger",
+                            onSelect: () => void handleDeleteFundEntry(entry.id),
+                          },
+                        ]}
+                      />
+                    </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-3">
-                    <span
-                      className={`text-sm font-semibold tabular-nums ${
-                        entry.entry_type === "deposit" ? "text-emerald-700" : "text-rose-700"
-                      }`}
-                    >
-                      {formatCurrency(
-                        entry.entry_type === "deposit" ? entry.amount : -entry.amount,
-                      )}
-                    </span>
-                    <Menu
-                      items={[
-                        {
-                          kind: "action",
-                          label: "Buchung löschen",
-                          tone: "danger",
-                          onSelect: () => void handleDeleteFundEntry(entry.id),
-                        },
-                      ]}
-                    />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
