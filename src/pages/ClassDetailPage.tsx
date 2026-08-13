@@ -74,6 +74,7 @@ export const ClassDetailPage = () => {
     amount: "",
     entry_date: new Date().toISOString().slice(0, 10),
     note: "",
+    student_id: "",
   });
   const [isFundModalOpen, setIsFundModalOpen] = useState(false);
   const [fundCreateError, setFundCreateError] = useState<string | null>(null);
@@ -213,13 +214,15 @@ export const ClassDetailPage = () => {
       await fundQuery.createEntry.mutateAsync({
         teacher_id: currentTeacherId,
         class_id: classId,
-        student_id: null,
+        student_id: result.data.entry_type === "deposit" && result.data.student_id
+          ? result.data.student_id
+          : null,
         entry_type: result.data.entry_type,
         amount: result.data.amount,
         entry_date: result.data.entry_date,
         note: result.data.note || null,
       });
-      setFundForm((prev) => ({ ...prev, amount: "", note: "" }));
+      setFundForm((prev) => ({ ...prev, amount: "", note: "", student_id: "" }));
       setFundCreateError(null);
       setIsFundModalOpen(false);
       toast.success("Buchung gespeichert.");
@@ -640,11 +643,37 @@ export const ClassDetailPage = () => {
               className="field"
               value={fundForm.entry_type}
               onChange={(event) =>
-                setFundForm((prev) => ({ ...prev, entry_type: event.target.value }))
+                setFundForm((prev) => ({
+                  ...prev,
+                  entry_type: event.target.value,
+                  student_id: event.target.value === "withdrawal" ? "" : prev.student_id,
+                }))
               }
             >
               <option value="deposit">Einzahlung</option>
               <option value="withdrawal">Auszahlung</option>
+            </select>
+          </Field>
+          <Field
+            label="Schüler"
+            htmlFor="class-fund-student"
+            hint="Optional. Nur bei Einzahlungen wählbar."
+          >
+            <select
+              id="class-fund-student"
+              className="field"
+              value={fundForm.student_id}
+              disabled={fundForm.entry_type === "withdrawal"}
+              onChange={(event) =>
+                setFundForm((prev) => ({ ...prev, student_id: event.target.value }))
+              }
+            >
+              <option value="">Kein Schüler / Klasse allgemein</option>
+              {(studentsQuery.data ?? []).map((student) => (
+                <option key={student.id} value={student.id}>
+                  {student.first_name} {student.last_name}
+                </option>
+              ))}
             </select>
           </Field>
           <Field label="Betrag" htmlFor="class-fund-amount">
