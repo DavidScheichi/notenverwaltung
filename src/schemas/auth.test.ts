@@ -47,6 +47,9 @@ describe("resetPasswordSchema", () => {
       confirmPassword: "anders1",
     });
     expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(["confirmPassword"]);
+    }
   });
 });
 
@@ -67,6 +70,9 @@ describe("signupSchema", () => {
       confirmPassword: "anders1",
     });
     expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(["confirmPassword"]);
+    }
   });
 
   it("lehnt eine ungültige E-Mail ab", () => {
