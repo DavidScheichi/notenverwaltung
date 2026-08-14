@@ -85,6 +85,11 @@ export const StudentDetailPage = () => {
         eyebrow={classQuery.data?.name ?? "Klasse"}
         title={`${studentQuery.data?.first_name ?? ""} ${studentQuery.data?.last_name ?? ""}`.trim() || "Schüler"}
         description={studentQuery.data?.notes || undefined}
+        actions={
+          <Link to={`/students/${studentId}/print`} className="btn-secondary btn-sm">
+            Zeugnis drucken
+          </Link>
+        }
       />
 
       {assessmentOverviewQuery.error ? (

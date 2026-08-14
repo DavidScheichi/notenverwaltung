@@ -10,6 +10,7 @@ import { OnboardingPage } from "./pages/OnboardingPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { SignupPage } from "./pages/SignupPage";
 import { StudentDetailPage } from "./pages/StudentDetailPage";
+import { StudentPrintPage } from "./pages/StudentPrintPage";
 import { StudentsPage } from "./pages/StudentsPage";
 import { SubjectOverviewPage } from "./pages/SubjectOverviewPage";
 import { SubjectsPage } from "./pages/SubjectsPage";
@@ -34,6 +35,10 @@ export const router = createBrowserRouter([
   {
     path: "/signup",
     element: <SignupPage />,
+  },
+  {
+    path: "/students/:studentId/print",
+    element: <StudentPrintPage />,
   },
   {
     path: "/",
