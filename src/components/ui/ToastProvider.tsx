@@ -45,22 +45,6 @@ const toneClass: Record<ToastType, string> = {
   undoable: "border-line-strong bg-surface text-ink",
 };
 
-const toneSymbol: Record<ToastType, string> = {
-  success: "✓",
-  info: "i",
-  warning: "!",
-  error: "!",
-  undoable: "↩",
-};
-
-const toneBadge: Record<ToastType, string> = {
-  success: "bg-emerald-600 text-white",
-  info: "bg-sky-600 text-white",
-  warning: "bg-amber-500 text-white",
-  error: "bg-rose-600 text-white",
-  undoable: "bg-ink text-white",
-};
-
 export const ToastProvider = ({ children }: { children: ReactNode }) => {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const timersRef = useRef(new Map<string, number>());
@@ -114,43 +98,37 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
           <div
             key={toast.id}
             role="status"
-            className={`pointer-events-auto flex animate-toast-in items-start gap-3 rounded-xl border px-4 py-3 shadow-overlay ${toneClass[toast.type]}`}
+            className={`pointer-events-auto rounded-xl border px-3 py-2 shadow-sm ${toneClass[toast.type]}`}
           >
-            <span
-              aria-hidden="true"
-              className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${toneBadge[toast.type]}`}
-            >
-              {toneSymbol[toast.type]}
-            </span>
-
-            <p className="min-w-0 flex-1 text-sm font-medium leading-snug">{toast.message}</p>
-
-            {toast.type === "undoable" && toast.onUndo ? (
+            <div className="flex items-start gap-2">
+              <p className="flex-1 text-sm">{toast.message}</p>
               <button
                 type="button"
-                className="btn-secondary btn-sm shrink-0"
-                onClick={async () => {
-                  try {
-                    await toast.onUndo?.();
-                  } catch {
-                    push("error", "Rückgängig konnte nicht ausgeführt werden.");
-                  } finally {
-                    dismiss(toast.id);
-                  }
-                }}
+                className="text-xs font-semibold text-ink-3 hover:text-ink"
+                onClick={() => dismiss(toast.id)}
               >
-                Rückgängig
+                Schließen
               </button>
+            </div>
+            {toast.type === "undoable" && toast.onUndo ? (
+              <div className="mt-2 flex justify-end">
+                <button
+                  type="button"
+                  className="rounded-lg border border-line px-2 py-1 text-xs font-semibold text-ink-2 hover:bg-sunken"
+                  onClick={async () => {
+                    try {
+                      await toast.onUndo?.();
+                    } catch {
+                      push("error", "Rückgängig konnte nicht ausgeführt werden.");
+                    } finally {
+                      dismiss(toast.id);
+                    }
+                  }}
+                >
+                  Rückgängig
+                </button>
+              </div>
             ) : null}
-
-            <button
-              type="button"
-              aria-label="Meldung schließen"
-              className="-mr-1 -mt-1 shrink-0 rounded p-1 text-lg leading-none opacity-60 transition hover:opacity-100"
-              onClick={() => dismiss(toast.id)}
-            >
-              ×
-            </button>
           </div>
         ))}
       </div>
