@@ -1,23 +1,24 @@
 import { useState } from "react";
-import { Link, Navigate } from "react-router-dom";
-import { LoginForm } from "../components/auth/LoginForm";
+import { Link } from "react-router-dom";
+import { ForgotPasswordForm } from "../components/auth/ForgotPasswordForm";
 import { useAuth } from "../hooks/useAuth";
 import { supabaseConfigError } from "../lib/supabase/client";
 
-export const LoginPage = () => {
-  const { isAuthenticated, isLoading, signIn } = useAuth();
+export const ForgotPasswordPage = () => {
+  const { resetPasswordForEmail } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
-  if (!isLoading && isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-
-  const handleSubmit = async (values: { email: string; password: string }) => {
+  const handleSubmit = async (email: string) => {
     setIsSubmitting(true);
     try {
-      await signIn(values.email, values.password);
+      await resetPasswordForEmail(email);
+    } catch {
+      // Bewusst kein Fehler-Rethrow: Anti-Enumeration — die Erfolgsmeldung
+      // wird unabhängig vom Ergebnis gezeigt, siehe Design-Dokument.
     } finally {
       setIsSubmitting(false);
+      setIsSubmitted(true);
     }
   };
 
@@ -36,9 +37,9 @@ export const LoginPage = () => {
           >
             N
           </span>
-          <h1 className="mt-4 text-2xl font-semibold text-ink">Notenverwaltung</h1>
+          <h1 className="mt-4 text-2xl font-semibold text-ink">Passwort vergessen</h1>
           <p className="mt-1.5 text-sm text-ink-3">
-            Noten, Leistungsnachweise und Klassenkasse an einem Ort.
+            Wir senden dir einen Link zum Zurücksetzen.
           </p>
         </div>
 
@@ -47,18 +48,23 @@ export const LoginPage = () => {
             <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
               {supabaseConfigError}
             </div>
-          ) : null}
-
-          <LoginForm
-            onSubmit={handleSubmit}
-            isSubmitting={isSubmitting}
-            isDisabled={Boolean(supabaseConfigError)}
-          />
+          ) : isSubmitted ? (
+            <p className="text-sm text-ink-2">
+              Falls ein Konto mit dieser E-Mail existiert, wurde ein Link zum
+              Zurücksetzen des Passworts gesendet. Prüfe dein Postfach.
+            </p>
+          ) : (
+            <ForgotPasswordForm
+              onSubmit={handleSubmit}
+              isSubmitting={isSubmitting}
+              isDisabled={Boolean(supabaseConfigError)}
+            />
+          )}
         </div>
 
         <p className="mt-4 text-center text-sm text-ink-3">
-          <Link to="/forgot-password" className="hover:text-accent-strong hover:underline">
-            Passwort vergessen?
+          <Link to="/login" className="hover:text-accent-strong hover:underline">
+            Zurück zum Login
           </Link>
         </p>
       </div>
