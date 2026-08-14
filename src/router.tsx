@@ -6,6 +6,7 @@ import { ClassDetailPage } from "./pages/ClassDetailPage";
 import { ClassesPage } from "./pages/ClassesPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { LoginPage } from "./pages/LoginPage";
+import { OnboardingPage } from "./pages/OnboardingPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { SignupPage } from "./pages/SignupPage";
 import { StudentDetailPage } from "./pages/StudentDetailPage";
@@ -17,6 +18,10 @@ export const router = createBrowserRouter([
   {
     path: "/login",
     element: <LoginPage />,
+  },
+  {
+    path: "/onboarding",
+    element: <OnboardingPage />,
   },
   {
     path: "/forgot-password",

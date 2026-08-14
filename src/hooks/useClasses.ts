@@ -33,14 +33,20 @@ export const useClasses = () => {
         throw new Error("Nicht eingeloggt.");
       }
 
-      const { error } = await supabase.from("classes").insert({
-        name,
-        teacher_id: user.id,
-      });
+      const { data, error } = await supabase
+        .from("classes")
+        .insert({
+          name,
+          teacher_id: user.id,
+        })
+        .select()
+        .single();
 
       if (error) {
         throw error;
       }
+
+      return data as SchoolClass;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey }),
   });

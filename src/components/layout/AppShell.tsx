@@ -27,6 +27,10 @@ export const AppShell = () => {
     return <Navigate to="/login" replace />;
   }
 
+  if (classesQuery.isSuccess && classesQuery.data.length === 0) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
   const email = session?.user.email ?? "";
   const classes = classesQuery.data ?? [];
 
