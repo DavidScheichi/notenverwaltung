@@ -48,7 +48,10 @@ export const useClasses = () => {
 
       return data as SchoolClass;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onSuccess: (data) => {
+      queryClient.setQueryData<SchoolClass[]>(queryKey, (old) => [data, ...(old ?? [])]);
+      queryClient.invalidateQueries({ queryKey });
+    },
   });
 
   const updateClass = useMutation({

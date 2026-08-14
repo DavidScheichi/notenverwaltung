@@ -15,6 +15,14 @@ export const OnboardingPage = () => {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  if (isAuthLoading || isClassesLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-ink-3">Wird geladen...</p>
+      </div>
+    );
+  }
+
   if (!isAuthLoading && !isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
