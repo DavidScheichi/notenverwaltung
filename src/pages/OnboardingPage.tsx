@@ -6,10 +6,16 @@ import { useToast } from "../components/ui/ToastProvider";
 import { Field } from "../components/ui/Field";
 import { ErrorState } from "../components/ui/ErrorState";
 import { classSchema } from "../schemas/classes";
+import { supabaseConfigError } from "../lib/supabase/client";
 
 export const OnboardingPage = () => {
   const { isAuthenticated, isLoading: isAuthLoading, signOut } = useAuth();
-  const { data: classes, isLoading: isClassesLoading, createClass } = useClasses();
+  const {
+    data: classes,
+    isLoading: isClassesLoading,
+    error: classesError,
+    createClass,
+  } = useClasses();
   const toast = useToast();
   const navigate = useNavigate();
   const [name, setName] = useState("");
@@ -43,7 +49,7 @@ export const OnboardingPage = () => {
 
     try {
       const created = await createClass.mutateAsync(result.data.name);
-      toast.success("Klasse wurde erstellt.");
+      toast.success("Klasse wurde angelegt.");
       navigate(`/classes/${created.id}`, { replace: true });
     } catch (submitError) {
       setError(
@@ -84,26 +90,34 @@ export const OnboardingPage = () => {
         </div>
 
         <div className="card-raised p-6">
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <Field label="Klassenname" htmlFor="onboarding-class-name">
-              <input
-                id="onboarding-class-name"
-                className="field"
-                type="text"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="z. B. 3B"
-              />
-            </Field>
-            {error ? <ErrorState message={error} /> : null}
-            <button
-              type="submit"
-              className="btn-primary w-full"
-              disabled={createClass.isPending}
-            >
-              {createClass.isPending ? "Wird gespeichert..." : "Klasse anlegen"}
-            </button>
-          </form>
+          {supabaseConfigError ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              {supabaseConfigError}
+            </div>
+          ) : classesError ? (
+            <ErrorState message={classesError.message} />
+          ) : (
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              <Field label="Klassenname" htmlFor="onboarding-class-name">
+                <input
+                  id="onboarding-class-name"
+                  className="field"
+                  type="text"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="z. B. 3B"
+                />
+              </Field>
+              {error ? <ErrorState message={error} /> : null}
+              <button
+                type="submit"
+                className="btn-primary w-full"
+                disabled={createClass.isPending}
+              >
+                {createClass.isPending ? "Wird gespeichert..." : "Klasse anlegen"}
+              </button>
+            </form>
+          )}
         </div>
 
         <p className="mt-4 text-center text-sm text-ink-3">

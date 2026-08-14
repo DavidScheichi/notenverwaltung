@@ -400,9 +400,21 @@ const createClass = useMutation({
 
     return data as SchoolClass;
   },
-  onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+  onSuccess: (data) => {
+    queryClient.setQueryData<SchoolClass[]>(queryKey, (old) => [data, ...(old ?? [])]);
+    queryClient.invalidateQueries({ queryKey });
+  },
 });
 ```
+
+> **Nachtrag (Fix-Runde nach Review):** `onSuccess` schreibt die neu angelegte
+> Klasse zusätzlich synchron in den Query-Cache (`setQueryData`), statt sich
+> allein auf `invalidateQueries` zu verlassen. Grund: ohne diesen Schritt kam
+> es zu einem Race Condition — `AppShell` mountet direkt nach dem
+> `navigate("/classes/<id>")` in `OnboardingPage` neu, las dabei aber noch den
+> alten (leeren) Cache-Stand, bevor der durch `invalidateQueries` angestoßene
+> Refetch abgeschlossen war, und leitete fälschlich zurück zu `/onboarding`.
+> `setQueryData` schließt dieses Zeitfenster.
 
 - [ ] **Step 2: `OnboardingPage` erstellen**
 

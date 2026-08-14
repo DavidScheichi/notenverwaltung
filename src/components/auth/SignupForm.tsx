@@ -47,6 +47,7 @@ export const SignupForm = ({
           id="signup-email"
           className="field"
           type="email"
+          autoComplete="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           placeholder="max@schule.at"
@@ -57,6 +58,7 @@ export const SignupForm = ({
           id="signup-password"
           className="field"
           type="password"
+          autoComplete="new-password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           placeholder="Mindestens 6 Zeichen"
@@ -67,6 +69,7 @@ export const SignupForm = ({
           id="signup-confirm"
           className="field"
           type="password"
+          autoComplete="new-password"
           value={confirmPassword}
           onChange={(event) => setConfirmPassword(event.target.value)}
           placeholder="Mindestens 6 Zeichen"

@@ -15,7 +15,7 @@ export const AppShell = () => {
   const { isAuthenticated, isLoading, session } = useAuth();
   const classesQuery = useClasses();
 
-  if (isLoading) {
+  if (isLoading || classesQuery.isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <p className="text-sm text-ink-3">Sitzung wird geladen...</p>
@@ -27,6 +27,10 @@ export const AppShell = () => {
     return <Navigate to="/login" replace />;
   }
 
+  // Ableitung "braucht Onboarding" aus 0 Klassen (keine eigene Spalte, siehe
+  // docs/superpowers/specs/2026-08-14-signup-onboarding-design.md). Kann nicht
+  // zwischen "nie eine Klasse gehabt" und "letzte Klasse gerade gelöscht"
+  // unterscheiden — relevant, sobald deleteClass an die UI angebunden wird.
   if (classesQuery.isSuccess && classesQuery.data.length === 0) {
     return <Navigate to="/onboarding" replace />;
   }

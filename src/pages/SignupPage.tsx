@@ -1,13 +1,17 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { SignupForm } from "../components/auth/SignupForm";
 import { useAuth } from "../hooks/useAuth";
 import { supabaseConfigError } from "../lib/supabase/client";
 
 export const SignupPage = () => {
-  const { signUp } = useAuth();
+  const { isAuthenticated, isLoading, signUp } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+  if (!isLoading && isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
 
   const handleSubmit = async (email: string, password: string) => {
     setIsSubmitting(true);
