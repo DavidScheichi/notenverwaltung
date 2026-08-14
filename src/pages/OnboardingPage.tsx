@@ -8,12 +8,16 @@ import { ErrorState } from "../components/ui/ErrorState";
 import { classSchema } from "../schemas/classes";
 
 export const OnboardingPage = () => {
-  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading, signOut } = useAuth();
   const { data: classes, isLoading: isClassesLoading, createClass } = useClasses();
   const toast = useToast();
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  if (!isAuthLoading && !isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
 
   if (isAuthLoading || isClassesLoading) {
     return (
@@ -23,11 +27,7 @@ export const OnboardingPage = () => {
     );
   }
 
-  if (!isAuthLoading && !isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (!isAuthLoading && !isClassesLoading && (classes?.length ?? 0) > 0) {
+  if ((classes?.length ?? 0) > 0) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -51,6 +51,14 @@ export const OnboardingPage = () => {
           ? submitError.message
           : "Klasse konnte nicht angelegt werden.",
       );
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch {
+      toast.error("Abmelden fehlgeschlagen. Bitte versuche es erneut.");
     }
   };
 
@@ -97,6 +105,16 @@ export const OnboardingPage = () => {
             </button>
           </form>
         </div>
+
+        <p className="mt-4 text-center text-sm text-ink-3">
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="hover:text-accent-strong hover:underline"
+          >
+            Abmelden
+          </button>
+        </p>
       </div>
     </div>
   );
