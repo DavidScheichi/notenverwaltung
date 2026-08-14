@@ -52,6 +52,13 @@ export const useAuth = () => {
     }
   };
 
+  const updatePassword = async (password: string) => {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) {
+      throw error;
+    }
+  };
+
   return {
     isAuthenticated: Boolean(session),
     isLoading,
@@ -59,6 +66,7 @@ export const useAuth = () => {
     signIn,
     signOut,
     resetPasswordForEmail,
+    updatePassword,
   };
 };
 
