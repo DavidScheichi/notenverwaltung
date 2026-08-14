@@ -7,6 +7,7 @@ import { ClassesPage } from "./pages/ClassesPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { LoginPage } from "./pages/LoginPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
+import { SignupPage } from "./pages/SignupPage";
 import { StudentDetailPage } from "./pages/StudentDetailPage";
 import { StudentsPage } from "./pages/StudentsPage";
 import { SubjectOverviewPage } from "./pages/SubjectOverviewPage";
@@ -24,6 +25,10 @@ export const router = createBrowserRouter([
   {
     path: "/reset-password",
     element: <ResetPasswordPage />,
+  },
+  {
+    path: "/signup",
+    element: <SignupPage />,
   },
   {
     path: "/",

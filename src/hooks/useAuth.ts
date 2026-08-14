@@ -59,6 +59,19 @@ export const useAuth = () => {
     }
   };
 
+  const signUp = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/onboarding`,
+      },
+    });
+    if (error) {
+      throw error;
+    }
+  };
+
   return {
     isAuthenticated: Boolean(session),
     isLoading,
@@ -67,6 +80,7 @@ export const useAuth = () => {
     signOut,
     resetPasswordForEmail,
     updatePassword,
+    signUp,
   };
 };
 

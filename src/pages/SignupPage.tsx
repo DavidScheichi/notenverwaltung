@@ -1,23 +1,24 @@
 import { useState } from "react";
-import { Link, Navigate } from "react-router-dom";
-import { LoginForm } from "../components/auth/LoginForm";
+import { Link } from "react-router-dom";
+import { SignupForm } from "../components/auth/SignupForm";
 import { useAuth } from "../hooks/useAuth";
 import { supabaseConfigError } from "../lib/supabase/client";
 
-export const LoginPage = () => {
-  const { isAuthenticated, isLoading, signIn } = useAuth();
+export const SignupPage = () => {
+  const { signUp } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
-  if (!isLoading && isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-
-  const handleSubmit = async (values: { email: string; password: string }) => {
+  const handleSubmit = async (email: string, password: string) => {
     setIsSubmitting(true);
     try {
-      await signIn(values.email, values.password);
+      await signUp(email, password);
+    } catch {
+      // Bewusst kein Fehler-Rethrow: Anti-Enumeration — die Erfolgsmeldung
+      // wird unabhängig vom Ergebnis gezeigt, siehe Design-Dokument.
     } finally {
       setIsSubmitting(false);
+      setIsSubmitted(true);
     }
   };
 
@@ -36,7 +37,7 @@ export const LoginPage = () => {
           >
             N
           </span>
-          <h1 className="mt-4 text-2xl font-semibold text-ink">Notenverwaltung</h1>
+          <h1 className="mt-4 text-2xl font-semibold text-ink">Konto erstellen</h1>
           <p className="mt-1.5 text-sm text-ink-3">
             Noten, Leistungsnachweise und Klassenkasse an einem Ort.
           </p>
@@ -47,24 +48,23 @@ export const LoginPage = () => {
             <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
               {supabaseConfigError}
             </div>
-          ) : null}
-
-          <LoginForm
-            onSubmit={handleSubmit}
-            isSubmitting={isSubmitting}
-            isDisabled={Boolean(supabaseConfigError)}
-          />
+          ) : isSubmitted ? (
+            <p className="text-sm text-ink-2">
+              Bestätige deine E-Mail-Adresse, um loszulegen. Prüfe dein
+              Postfach und klicke auf den Bestätigungslink.
+            </p>
+          ) : (
+            <SignupForm
+              onSubmit={handleSubmit}
+              isSubmitting={isSubmitting}
+              isDisabled={Boolean(supabaseConfigError)}
+            />
+          )}
         </div>
 
         <p className="mt-4 text-center text-sm text-ink-3">
-          <Link to="/forgot-password" className="hover:text-accent-strong hover:underline">
-            Passwort vergessen?
-          </Link>
-        </p>
-        <p className="mt-2 text-center text-sm text-ink-3">
-          Neu hier?{" "}
-          <Link to="/signup" className="font-medium text-accent hover:text-accent-strong hover:underline">
-            Jetzt registrieren
+          <Link to="/login" className="hover:text-accent-strong hover:underline">
+            Zurück zum Login
           </Link>
         </p>
       </div>
