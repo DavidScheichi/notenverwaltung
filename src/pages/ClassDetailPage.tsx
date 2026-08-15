@@ -87,6 +87,10 @@ export const ClassDetailPage = () => {
   const currentYearLabel =
     schoolYears.find((year) => year.id === classQuery.data?.school_year_id)?.label ?? "";
 
+  const isArchived = Boolean(
+    classQuery.data && currentSchoolYear && classQuery.data.school_year_id !== currentSchoolYear.id,
+  );
+
   const currentTeacherId = classQuery.data?.teacher_id ?? "";
 
   const fundBalance = useMemo(
@@ -314,6 +318,8 @@ export const ClassDetailPage = () => {
               <button
                 type="button"
                 className="btn-primary btn-sm"
+                disabled={isArchived}
+                title={isArchived ? "Vergangene Schuljahre sind schreibgeschützt." : undefined}
                 onClick={() => setIsStudentModalOpen(true)}
               >
                 Schüler hinzufügen
@@ -438,6 +444,8 @@ export const ClassDetailPage = () => {
             <button
               type="button"
               className="btn-primary btn-sm"
+              disabled={isArchived}
+              title={isArchived ? "Vergangene Schuljahre sind schreibgeschützt." : undefined}
               onClick={() => setIsSubjectModalOpen(true)}
             >
               Fach anlegen
@@ -530,6 +538,8 @@ export const ClassDetailPage = () => {
             <button
               type="button"
               className="btn-primary btn-sm"
+              disabled={isArchived}
+              title={isArchived ? "Vergangene Schuljahre sind schreibgeschützt." : undefined}
               onClick={() => setIsFundModalOpen(true)}
             >
               Buchung erfassen
