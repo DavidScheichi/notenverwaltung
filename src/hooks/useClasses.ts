@@ -1,19 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase/client";
+import { ensureCurrentSchoolYear } from "./useSchoolYears";
 import type { SchoolClass } from "../lib/supabase/types";
 
-const queryKey = ["classes"];
-
-export const useClasses = () => {
+export const useClasses = (schoolYearId?: string) => {
   const queryClient = useQueryClient();
+  const queryKey = ["classes", schoolYearId ?? "all"];
 
   const classesQuery = useQuery({
     queryKey,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let request = supabase
         .from("classes")
         .select("*")
         .order("created_at", { ascending: false });
+
+      if (schoolYearId) {
+        request = request.eq("school_year_id", schoolYearId);
+      }
+
+      const { data, error } = await request;
 
       if (error) {
         throw error;
@@ -33,11 +39,14 @@ export const useClasses = () => {
         throw new Error("Nicht eingeloggt.");
       }
 
+      const schoolYear = await ensureCurrentSchoolYear(user.id);
+
       const { data, error } = await supabase
         .from("classes")
         .insert({
           name,
           teacher_id: user.id,
+          school_year_id: schoolYear.id,
         })
         .select()
         .single();
@@ -48,9 +57,9 @@ export const useClasses = () => {
 
       return data as SchoolClass;
     },
-    onSuccess: (data) => {
-      queryClient.setQueryData<SchoolClass[]>(queryKey, (old) => [data, ...(old ?? [])]);
-      queryClient.invalidateQueries({ queryKey });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["classes"] });
+      queryClient.invalidateQueries({ queryKey: ["school-years"] });
     },
   });
 
@@ -62,7 +71,7 @@ export const useClasses = () => {
         throw error;
       }
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["classes"] }),
   });
 
   const deleteClass = useMutation({
@@ -73,7 +82,7 @@ export const useClasses = () => {
         throw error;
       }
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["classes"] }),
   });
 
   return {
@@ -102,4 +111,3 @@ export const useClassById = (classId?: string) =>
       return data as SchoolClass;
     },
   });
-

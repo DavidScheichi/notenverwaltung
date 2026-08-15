@@ -3,7 +3,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useClasses } from "../../hooks/useClasses";
 import { AccountMenu } from "./AccountMenu";
 import { BottomNav } from "./BottomNav";
-import { SchoolYearProvider } from "./SchoolYearContext";
+import { SchoolYearProvider, useSchoolYear } from "./SchoolYearContext";
 import { SchoolYearSwitcher } from "./SchoolYearSwitcher";
 
 const navItemClass = ({ isActive }: { isActive: boolean }) =>
@@ -14,7 +14,8 @@ const navItemClass = ({ isActive }: { isActive: boolean }) =>
   }`;
 
 const AppShellInner = ({ email }: { email: string }) => {
-  const classesQuery = useClasses();
+  const { selectedSchoolYear } = useSchoolYear();
+  const classesQuery = useClasses(selectedSchoolYear?.id);
   const classes = classesQuery.data ?? [];
 
   return (
