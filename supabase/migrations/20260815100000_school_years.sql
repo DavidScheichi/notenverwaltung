@@ -10,6 +10,25 @@ create table if not exists public.school_years (
   created_at timestamptz not null default timezone('utc', now())
 );
 
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'school_years_owner_id_fkey'
+  ) then
+    alter table public.school_years
+      add constraint school_years_owner_id_fkey
+      foreign key (owner_id) references auth.users (id) on delete cascade;
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint where conname = 'school_years_teacher_id_fkey'
+  ) then
+    alter table public.school_years
+      add constraint school_years_teacher_id_fkey
+      foreign key (teacher_id) references auth.users (id) on delete cascade;
+  end if;
+end $$;
+
 create unique index if not exists idx_school_years_one_current_per_owner
   on public.school_years (owner_id)
   where is_current;
@@ -114,5 +133,12 @@ create index if not exists idx_classes_school_year on public.classes (school_yea
 create index if not exists idx_classes_predecessor on public.classes (predecessor_class_id);
 create index if not exists idx_enrollments_school_year on public.enrollments (school_year_id);
 
-alter table public.enrollments
-  add constraint enrollments_student_school_year_key unique (student_id, school_year_id);
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'enrollments_student_school_year_key'
+  ) then
+    alter table public.enrollments
+      add constraint enrollments_student_school_year_key unique (student_id, school_year_id);
+  end if;
+end $$;
