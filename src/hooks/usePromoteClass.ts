@@ -174,6 +174,7 @@ export const usePromoteClass = () => {
       queryClient.invalidateQueries({ queryKey: ["classes"] });
       queryClient.invalidateQueries({ queryKey: ["subjects"] });
       queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["student"] });
       queryClient.invalidateQueries({ queryKey: ["class-fund"] });
       queryClient.invalidateQueries({ queryKey: ["school-years"] });
     },

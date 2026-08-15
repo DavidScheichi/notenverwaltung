@@ -22,7 +22,7 @@ const SkeletonRow = () => <div className="h-16 animate-pulse rounded-xl bg-sunke
 export const DashboardPage = () => {
   const toast = useToast();
   const navigate = useNavigate();
-  const { selectedSchoolYear } = useSchoolYear();
+  const { selectedSchoolYear, isCurrentYearSelected } = useSchoolYear();
   const { data: classes, isLoading: classesLoading, error: classesError, createClass } =
     useClasses(selectedSchoolYear?.id);
   const { data: students, isLoading: studentsLoading, error: studentsError } =
@@ -175,7 +175,17 @@ export const DashboardPage = () => {
               ]
         }
         actions={
-          <button type="button" className="btn-primary" onClick={() => setIsCreateOpen(true)}>
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={!isCurrentYearSelected}
+            title={
+              isCurrentYearSelected
+                ? undefined
+                : "Neue Klassen können nur im aktuellen Schuljahr angelegt werden."
+            }
+            onClick={() => setIsCreateOpen(true)}
+          >
             Neue Klasse
           </button>
         }
@@ -207,9 +217,13 @@ export const DashboardPage = () => {
           <div className="p-5">
             <EmptyState
               title="Noch keine Klassen"
-              description="Lege deine erste Klasse an, um mit der Notenverwaltung zu starten."
-              actionLabel="Neue Klasse"
-              onAction={() => setIsCreateOpen(true)}
+              description={
+                isCurrentYearSelected
+                  ? "Lege deine erste Klasse an, um mit der Notenverwaltung zu starten."
+                  : "Neue Klassen können nur im aktuellen Schuljahr angelegt werden."
+              }
+              actionLabel={isCurrentYearSelected ? "Neue Klasse" : undefined}
+              onAction={isCurrentYearSelected ? () => setIsCreateOpen(true) : undefined}
             />
           </div>
         ) : (

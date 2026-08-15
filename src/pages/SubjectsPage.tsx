@@ -74,13 +74,27 @@ export const SubjectsPage = () => {
   const getClassName = (classId: string) =>
     classesQuery.data?.find((entry) => entry.id === classId)?.name ?? "Keine Klasse";
 
+  // useAllSubjects() liefert Fächer aus allen Schuljahren. Nach einer
+  // Klassen-Übernahme existiert z. B. "Mathematik" doppelt (Original + Kopie
+  // in der neuen Klasse), und die alte Kopie zeigt "Keine Klasse", weil ihre
+  // Klasse nicht mehr im jahres-gefilterten classesQuery steckt. Auf das
+  // bereits jahres-gefilterte classesQuery einschränken, bevor gesucht/gefiltert wird.
+  const classIdsInSelectedYear = useMemo(
+    () => new Set((classesQuery.data ?? []).map((schoolClass) => schoolClass.id)),
+    [classesQuery.data],
+  );
+  const subjectsInSelectedYear = useMemo(
+    () => (subjectsQuery.data ?? []).filter((subject) => classIdsInSelectedYear.has(subject.class_id)),
+    [classIdsInSelectedYear, subjectsQuery.data],
+  );
+
   const filteredSubjects = useMemo(() => {
-    return (subjectsQuery.data ?? []).filter((subject) => {
+    return subjectsInSelectedYear.filter((subject) => {
       const matchesSearch = subject.name.toLowerCase().includes(search.toLowerCase());
       const matchesClass = !classFilter || subject.class_id === classFilter;
       return matchesSearch && matchesClass;
     });
-  }, [classFilter, search, subjectsQuery.data]);
+  }, [classFilter, search, subjectsInSelectedYear]);
 
   const hasFilters = Boolean(search || classFilter);
 
@@ -182,7 +196,7 @@ export const SubjectsPage = () => {
       <PageHeader
         title="Fächer"
         description="Alle Fächer über deine Klassen hinweg."
-        stats={[{ label: "Fächer", value: subjectsQuery.data?.length ?? 0 }]}
+        stats={[{ label: "Fächer", value: subjectsInSelectedYear.length }]}
         actions={
           <button type="button" className="btn-primary" onClick={() => setIsCreateOpen(true)}>
             Neues Fach
@@ -220,7 +234,7 @@ export const SubjectsPage = () => {
         {hasFilters ? (
           <div className="mt-3 flex items-center justify-between gap-3 border-t border-line pt-3">
             <p className="text-[13px] text-ink-3">
-              {filteredSubjects.length} von {subjectsQuery.data?.length ?? 0} Fächern
+              {filteredSubjects.length} von {subjectsInSelectedYear.length} Fächern
             </p>
             <button
               type="button"

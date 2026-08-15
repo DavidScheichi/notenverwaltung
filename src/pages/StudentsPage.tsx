@@ -38,8 +38,8 @@ const LoadingRows = () => (
 export const StudentsPage = () => {
   const toast = useToast();
   const { confirm, confirmDialog } = useConfirm();
-  const classesQuery = useClasses();
   const { selectedSchoolYear } = useSchoolYear();
+  const classesQuery = useClasses(selectedSchoolYear?.id);
   const studentsQuery = useAllStudents(selectedSchoolYear?.id);
   const studentActions = useStudents();
   const subjectsQuery = useAllSubjects();

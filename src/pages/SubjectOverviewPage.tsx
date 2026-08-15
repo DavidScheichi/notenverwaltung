@@ -12,7 +12,7 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { StatusLegend } from "../components/ui/StatusLegend";
 import { useConfirm } from "../components/ui/useConfirm";
 import { useSubjectAssessmentData } from "../hooks/useAssessmentDefinitions";
-import { useClassById } from "../hooks/useClasses";
+import { useClassById, useClasses } from "../hooks/useClasses";
 import { useStudents } from "../hooks/useStudents";
 import { useSubjectById } from "../hooks/useSubjects";
 import { calculateSubjectTotals, gradeFromPercent, resolveGradeBoundaries } from "../lib/subjectOverview";
@@ -39,6 +39,16 @@ export const SubjectOverviewPage = () => {
   const classQuery = useClassById(derivedClassId);
   const studentsQuery = useStudents(derivedClassId);
   const matrixQuery = useSubjectAssessmentData(subjectId);
+  // Unfiltert (alle Jahre), um zu erkennen, ob DIESE Klasse bereits ins
+  // nächste Schuljahr übernommen wurde — siehe gleiches Muster in
+  // ClassDetailPage.tsx. Nur dann ist die Notenerfassung gesperrt, unabhängig
+  // vom global ausgewählten Schuljahr.
+  const allClassesQuery = useClasses();
+  const isArchived = Boolean(
+    allClassesQuery.data?.some((c) => c.predecessor_class_id === derivedClassId),
+  );
+  const archivedMessage =
+    "Diese Klasse wurde bereits ins neue Schuljahr übernommen und ist schreibgeschützt.";
 
   const [drawerForm, setDrawerForm] = useState<{
     typeId: string;
@@ -270,11 +280,23 @@ export const SubjectOverviewPage = () => {
           { label: "Leistungsnachweise", value: visibleDefinitions.length },
         ]}
         actions={
-          <button type="button" className="btn-primary" onClick={() => setIsDrawerOpen(true)}>
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={isArchived}
+            title={isArchived ? archivedMessage : undefined}
+            onClick={() => setIsDrawerOpen(true)}
+          >
             Leistungsnachweis anlegen
           </button>
         }
       />
+
+      {isArchived ? (
+        <div className="rounded-xl border border-line bg-sunken px-4 py-3 text-sm text-ink-2">
+          {archivedMessage}
+        </div>
+      ) : null}
 
       {/* Filter — mobil kompakt, ab lg vollständig */}
       <section className="card p-4">
@@ -422,6 +444,11 @@ export const SubjectOverviewPage = () => {
                 results={results}
                 showDirectGrades={showDirectGrades}
                 onSave={async (payload) => {
+                  if (isArchived) {
+                    toast.error(archivedMessage);
+                    throw new Error(archivedMessage);
+                  }
+
                   try {
                     await matrixQuery.upsertResult.mutateAsync(payload);
                   } catch (error) {
@@ -444,6 +471,11 @@ export const SubjectOverviewPage = () => {
                 results={results}
                 showDirectGrades={showDirectGrades}
                 onSave={async (payload) => {
+                  if (isArchived) {
+                    toast.error(archivedMessage);
+                    throw new Error(archivedMessage);
+                  }
+
                   try {
                     await matrixQuery.upsertResult.mutateAsync(payload);
                   } catch (error) {
@@ -453,14 +485,24 @@ export const SubjectOverviewPage = () => {
                     throw error;
                   }
                 }}
-                onToggleInclude={(definitionId, includeInTotal) =>
+                onToggleInclude={(definitionId, includeInTotal) => {
+                  if (isArchived) {
+                    toast.error(archivedMessage);
+                    return;
+                  }
+
                   void matrixQuery.updateDefinition.mutate({
                     id: definitionId,
                     includeInTotal,
-                  })
-                }
+                  });
+                }}
                 onDeleteDefinition={async (definitionId) => {
                   setDeleteError(null);
+
+                  if (isArchived) {
+                    toast.error(archivedMessage);
+                    return;
+                  }
 
                   const confirmed = await confirm({
                     title: "Leistungsnachweis löschen?",
@@ -607,6 +649,10 @@ export const SubjectOverviewPage = () => {
         }
         onSave={async () => {
           setFormError(null);
+          if (isArchived) {
+            setFormError(archivedMessage);
+            return;
+          }
           if (!drawerForm.name.trim()) {
             setFormError("Name für Leistungsnachweis fehlt.");
             return;

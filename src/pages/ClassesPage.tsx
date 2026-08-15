@@ -14,7 +14,7 @@ import { classSchema } from "../schemas/classes";
 
 export const ClassesPage = () => {
   const toast = useToast();
-  const { selectedSchoolYear } = useSchoolYear();
+  const { selectedSchoolYear, isCurrentYearSelected } = useSchoolYear();
   const { data: classes, isLoading, error, createClass } = useClasses(selectedSchoolYear?.id);
   const studentsQuery = useAllStudents(selectedSchoolYear?.id);
   const subjectsQuery = useAllSubjects();
@@ -72,7 +72,17 @@ export const ClassesPage = () => {
         description="Alle Klassen, die du unterrichtest."
         stats={[{ label: "Klassen", value: classes?.length ?? 0 }]}
         actions={
-          <button type="button" className="btn-primary" onClick={() => setIsCreateOpen(true)}>
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={!isCurrentYearSelected}
+            title={
+              isCurrentYearSelected
+                ? undefined
+                : "Neue Klassen können nur im aktuellen Schuljahr angelegt werden."
+            }
+            onClick={() => setIsCreateOpen(true)}
+          >
             Neue Klasse
           </button>
         }
@@ -88,9 +98,13 @@ export const ClassesPage = () => {
       ) : !classes || classes.length === 0 ? (
         <EmptyState
           title="Noch keine Klassen"
-          description="Lege deine erste Klasse an, um Schüler, Fächer und Noten zu verwalten."
-          actionLabel="Neue Klasse"
-          onAction={() => setIsCreateOpen(true)}
+          description={
+            isCurrentYearSelected
+              ? "Lege deine erste Klasse an, um Schüler, Fächer und Noten zu verwalten."
+              : "Neue Klassen können nur im aktuellen Schuljahr angelegt werden."
+          }
+          actionLabel={isCurrentYearSelected ? "Neue Klasse" : undefined}
+          onAction={isCurrentYearSelected ? () => setIsCreateOpen(true) : undefined}
         />
       ) : (
         <div className="card-raised divide-y divide-line overflow-hidden">

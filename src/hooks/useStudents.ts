@@ -121,9 +121,19 @@ export const useStudents = (classId?: string) => {
       enrollmentId: string;
       newClassId: string;
     }) => {
+      const { data: targetClass, error: classError } = await supabase
+        .from("classes")
+        .select("school_year_id")
+        .eq("id", newClassId)
+        .single();
+
+      if (classError) {
+        throw classError;
+      }
+
       const { error } = await supabase
         .from("enrollments")
-        .update({ class_id: newClassId })
+        .update({ class_id: newClassId, school_year_id: targetClass.school_year_id })
         .eq("id", enrollmentId);
 
       if (error) {
@@ -277,10 +287,17 @@ export const useAllStudents = (schoolYearId?: string) =>
   useQuery({
     queryKey: ["students", "all", schoolYearId ?? "any"],
     queryFn: async () => {
-      let request = supabase
-        .from("students")
-        .select("*, enrollments(id, class_id, student_id)")
-        .order("last_name");
+      // Mit Jahres-Filter muss der Embed ein Inner-Join (!inner) sein, sonst
+      // liefert PostgREST bei einem left-joined Embed weiterhin JEDE
+      // Schüler-Zeile zurück (nur mit leerem enrollments-Array statt echter
+      // Filterung) — Schüler ohne Einschreibung im gewählten Jahr würden
+      // nicht verschwinden. Ohne Filter bleibt der left-joined Embed
+      // erhalten, damit Schüler ganz ohne Einschreibung weiterhin auftauchen.
+      const selectString = schoolYearId
+        ? "*, enrollments!inner(id, class_id, student_id)"
+        : "*, enrollments(id, class_id, student_id)";
+
+      let request = supabase.from("students").select(selectString).order("last_name");
 
       if (schoolYearId) {
         request = request.eq("enrollments.school_year_id", schoolYearId);
