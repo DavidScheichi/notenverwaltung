@@ -5,6 +5,7 @@ import { useClassById } from "../hooks/useClasses";
 import { useStudentById } from "../hooks/useStudents";
 import { useSubjects } from "../hooks/useSubjects";
 import { useStudentAssessmentOverview } from "../hooks/useAssessmentDefinitions";
+import { useSchoolYear } from "../components/layout/SchoolYearContext";
 import { GradeBadge } from "../components/ui/GradeBadge";
 import { ErrorState } from "../components/ui/ErrorState";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -20,7 +21,8 @@ export const StudentPrintPage = () => {
   const { studentId = "" } = useParams();
   const navigate = useNavigate();
 
-  const studentQuery = useStudentById(studentId);
+  const { currentSchoolYear } = useSchoolYear();
+  const studentQuery = useStudentById(studentId, currentSchoolYear?.id);
   const derivedClassId = studentQuery.data?.enrollments[0]?.class_id ?? "";
   const classQuery = useClassById(derivedClassId);
   const subjectsQuery = useSubjects(derivedClassId);

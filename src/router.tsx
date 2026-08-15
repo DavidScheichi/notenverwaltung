@@ -1,5 +1,6 @@
 import { Navigate, createBrowserRouter } from "react-router-dom";
 import { AppShell } from "./components/layout/AppShell";
+import { SchoolYearProvider } from "./components/layout/SchoolYearContext";
 import { AssessmentOverviewPage } from "./pages/AssessmentOverviewPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ClassDetailPage } from "./pages/ClassDetailPage";
@@ -38,7 +39,11 @@ export const router = createBrowserRouter([
   },
   {
     path: "/students/:studentId/print",
-    element: <StudentPrintPage />,
+    element: (
+      <SchoolYearProvider>
+        <StudentPrintPage />
+      </SchoolYearProvider>
+    ),
   },
   {
     path: "/",

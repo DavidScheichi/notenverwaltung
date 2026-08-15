@@ -6,6 +6,7 @@ import { Field } from "../components/ui/Field";
 import { Modal } from "../components/ui/Modal";
 import { PageHeader } from "../components/ui/PageHeader";
 import { useToast } from "../components/ui/ToastProvider";
+import { useSchoolYear } from "../components/layout/SchoolYearContext";
 import { useClasses } from "../hooks/useClasses";
 import { useAllStudents } from "../hooks/useStudents";
 import { useAllSubjects } from "../hooks/useSubjects";
@@ -13,8 +14,9 @@ import { classSchema } from "../schemas/classes";
 
 export const ClassesPage = () => {
   const toast = useToast();
-  const { data: classes, isLoading, error, createClass } = useClasses();
-  const studentsQuery = useAllStudents();
+  const { selectedSchoolYear } = useSchoolYear();
+  const { data: classes, isLoading, error, createClass } = useClasses(selectedSchoolYear?.id);
+  const studentsQuery = useAllStudents(selectedSchoolYear?.id);
   const subjectsQuery = useAllSubjects();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);

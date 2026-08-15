@@ -8,6 +8,7 @@ import { useStudentAssessmentOverview } from "../hooks/useAssessmentDefinitions"
 import { useClassById } from "../hooks/useClasses";
 import { useStudentById } from "../hooks/useStudents";
 import { useSubjects } from "../hooks/useSubjects";
+import { useSchoolYear } from "../components/layout/SchoolYearContext";
 import {
   calculateAssessmentPercent,
   gradeFromPercent,
@@ -24,7 +25,8 @@ const LoadingRows = () => (
 
 export const StudentDetailPage = () => {
   const { classId: classIdParam, studentId = "" } = useParams();
-  const studentQuery = useStudentById(studentId);
+  const { selectedSchoolYear } = useSchoolYear();
+  const studentQuery = useStudentById(studentId, selectedSchoolYear?.id);
   const derivedClassId = classIdParam ?? studentQuery.data?.enrollments[0]?.class_id ?? "";
   const classQuery = useClassById(derivedClassId);
   const subjectsQuery = useSubjects(derivedClassId);

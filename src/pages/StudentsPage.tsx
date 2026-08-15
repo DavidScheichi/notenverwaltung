@@ -10,6 +10,7 @@ import { Modal } from "../components/ui/Modal";
 import { PageHeader } from "../components/ui/PageHeader";
 import { useToast } from "../components/ui/ToastProvider";
 import { useConfirm } from "../components/ui/useConfirm";
+import { useSchoolYear } from "../components/layout/SchoolYearContext";
 import { useClasses } from "../hooks/useClasses";
 import { useAllStudents, useStudents } from "../hooks/useStudents";
 import { useAllSubjects } from "../hooks/useSubjects";
@@ -38,7 +39,8 @@ export const StudentsPage = () => {
   const toast = useToast();
   const { confirm, confirmDialog } = useConfirm();
   const classesQuery = useClasses();
-  const studentsQuery = useAllStudents();
+  const { selectedSchoolYear } = useSchoolYear();
+  const studentsQuery = useAllStudents(selectedSchoolYear?.id);
   const studentActions = useStudents();
   const subjectsQuery = useAllSubjects();
   const [search, setSearch] = useState("");

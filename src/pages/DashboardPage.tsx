@@ -8,6 +8,7 @@ import { GradeBadge } from "../components/ui/GradeBadge";
 import { Modal } from "../components/ui/Modal";
 import { PageHeader } from "../components/ui/PageHeader";
 import { useToast } from "../components/ui/ToastProvider";
+import { useSchoolYear } from "../components/layout/SchoolYearContext";
 import { useClasses } from "../hooks/useClasses";
 import { useAllStudents } from "../hooks/useStudents";
 import { useAllSubjects } from "../hooks/useSubjects";
@@ -21,8 +22,11 @@ const SkeletonRow = () => <div className="h-16 animate-pulse rounded-xl bg-sunke
 export const DashboardPage = () => {
   const toast = useToast();
   const navigate = useNavigate();
-  const { data: classes, isLoading: classesLoading, error: classesError, createClass } = useClasses();
-  const { data: students, isLoading: studentsLoading, error: studentsError } = useAllStudents();
+  const { selectedSchoolYear } = useSchoolYear();
+  const { data: classes, isLoading: classesLoading, error: classesError, createClass } =
+    useClasses(selectedSchoolYear?.id);
+  const { data: students, isLoading: studentsLoading, error: studentsError } =
+    useAllStudents(selectedSchoolYear?.id);
   const { data: subjects, isLoading: subjectsLoading, error: subjectsError } = useAllSubjects();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");
