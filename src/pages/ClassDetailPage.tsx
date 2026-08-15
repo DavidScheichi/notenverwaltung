@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { ImportStudentsModal } from "../components/ui/ImportStudentsModal";
 import { StudentCreateModal } from "../components/ui/StudentCreateModal";
 import { EmptyState } from "../components/ui/EmptyState";
 import { ErrorState } from "../components/ui/ErrorState";
@@ -61,6 +62,7 @@ export const ClassDetailPage = () => {
   });
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
   const [studentCreateError, setStudentCreateError] = useState<string | null>(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const [subjectForm, setSubjectForm] = useState<SubjectFormValues>({
     class_id: classId,
@@ -322,15 +324,26 @@ export const ClassDetailPage = () => {
                   {studentsQuery.data?.length ?? 0} Schüler in dieser Klasse
                 </p>
               </div>
-              <button
-                type="button"
-                className="btn-primary btn-sm"
-                disabled={isArchived}
-                title={isArchived ? "Vergangene Schuljahre sind schreibgeschützt." : undefined}
-                onClick={() => setIsStudentModalOpen(true)}
-              >
-                Schüler hinzufügen
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="btn-secondary btn-sm"
+                  disabled={isArchived}
+                  title={isArchived ? "Vergangene Schuljahre sind schreibgeschützt." : undefined}
+                  onClick={() => setIsImportModalOpen(true)}
+                >
+                  Aus CSV importieren
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary btn-sm"
+                  disabled={isArchived}
+                  title={isArchived ? "Vergangene Schuljahre sind schreibgeschützt." : undefined}
+                  onClick={() => setIsStudentModalOpen(true)}
+                >
+                  Schüler hinzufügen
+                </button>
+              </div>
             </div>
 
             {studentsQuery.error ? (
@@ -434,6 +447,42 @@ export const ClassDetailPage = () => {
                     : "Schüler konnte nicht angelegt werden.",
                 );
               }
+            }}
+          />
+
+          <ImportStudentsModal
+            isOpen={isImportModalOpen}
+            onClose={() => setIsImportModalOpen(false)}
+            existingNames={
+              new Set(
+                (studentsQuery.data ?? []).map(
+                  (student) =>
+                    `${student.first_name.trim().toLowerCase()}|${student.last_name
+                      .trim()
+                      .toLowerCase()}`,
+                ),
+              )
+            }
+            onImport={async (rows) => {
+              let succeeded = 0;
+              let failed = 0;
+
+              for (const row of rows) {
+                try {
+                  await studentsQuery.createStudent.mutateAsync({ ...row, classId });
+                  succeeded += 1;
+                } catch {
+                  failed += 1;
+                }
+              }
+
+              if (failed === 0) {
+                toast.success(`${succeeded} Schüler importiert.`);
+              } else {
+                toast.error(`${succeeded} importiert, ${failed} fehlgeschlagen.`);
+              }
+
+              return { succeeded, failed };
             }}
           />
         </>
