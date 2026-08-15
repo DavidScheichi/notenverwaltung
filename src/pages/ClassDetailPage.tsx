@@ -46,7 +46,9 @@ export const ClassDetailPage = () => {
   const [tab, setTab] = useState<TabKey>("students");
 
   const classQuery = useClassById(classId);
-  const classesQuery = useClasses();
+  const { schoolYears, selectedSchoolYear, selectSchoolYear } = useSchoolYear();
+  const classesQuery = useClasses(selectedSchoolYear?.id);
+  const allClassesQuery = useClasses();
   const studentsQuery = useStudents(classId);
   const subjectsQuery = useSubjects(classId);
   const assessmentsQuery = useAssessments({ classId });
@@ -82,14 +84,19 @@ export const ClassDetailPage = () => {
   const [isFundModalOpen, setIsFundModalOpen] = useState(false);
   const [fundCreateError, setFundCreateError] = useState<string | null>(null);
 
-  const { schoolYears, currentSchoolYear } = useSchoolYear();
   const [isPromoteModalOpen, setIsPromoteModalOpen] = useState(false);
   const currentYearLabel =
     schoolYears.find((year) => year.id === classQuery.data?.school_year_id)?.label ?? "";
 
-  const isArchived = Boolean(
-    classQuery.data && currentSchoolYear && classQuery.data.school_year_id !== currentSchoolYear.id,
+  // Ob DIESE Klasse bereits ins nächste Schuljahr übernommen wurde — unabhängig
+  // vom global ausgewählten/aktuellen Schuljahr. Sonst würde das Promoten der
+  // ersten Klasse eines Lehrers Geschwister-Klassen im selben (noch nicht
+  // übernommenen) Schuljahr fälschlich als archiviert markieren.
+  const hasSuccessor = Boolean(
+    allClassesQuery.data?.some((c) => c.predecessor_class_id === classQuery.data?.id),
   );
+
+  const isArchived = hasSuccessor;
 
   const currentTeacherId = classQuery.data?.teacher_id ?? "";
 
@@ -274,7 +281,7 @@ export const ClassDetailPage = () => {
           { label: "Kassenstand", value: formatCurrency(fundBalance) },
         ]}
         actions={
-          classQuery.data && classQuery.data.school_year_id === currentSchoolYear?.id ? (
+          classQuery.data && !hasSuccessor ? (
             <button
               type="button"
               className="btn-secondary btn-sm"
@@ -793,10 +800,11 @@ export const ClassDetailPage = () => {
           schoolClass={classQuery.data}
           currentLabel={currentYearLabel}
           students={studentsQuery.data ?? []}
-          onPromoted={(newClassId) => {
+          onPromoted={(newClass) => {
             setIsPromoteModalOpen(false);
+            selectSchoolYear(newClass.school_year_id);
             toast.success("Klasse wurde ins neue Schuljahr übernommen.");
-            navigate(`/classes/${newClassId}`);
+            navigate(`/classes/${newClass.id}`);
           }}
         />
       ) : null}

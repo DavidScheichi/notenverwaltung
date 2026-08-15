@@ -12,7 +12,7 @@ interface PromoteClassModalProps {
   schoolClass: SchoolClass;
   currentLabel: string;
   students: StudentWithEnrollment[];
-  onPromoted: (newClassId: string) => void;
+  onPromoted: (newClass: SchoolClass) => void;
 }
 
 export const PromoteClassModal = ({
@@ -69,7 +69,7 @@ export const PromoteClassModal = ({
         studentIds: selectedStudentIds,
       });
 
-      onPromoted(newClass.id);
+      onPromoted(newClass);
     } catch (submitError) {
       setError(
         submitError instanceof Error
