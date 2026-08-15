@@ -73,6 +73,16 @@ export const useStudents = (classId?: string) => {
         throw new Error("Nicht eingeloggt.");
       }
 
+      const { data: targetClass, error: classError } = await supabase
+        .from("classes")
+        .select("school_year_id")
+        .eq("id", targetClassId)
+        .single();
+
+      if (classError) {
+        throw classError;
+      }
+
       const { data: student, error: studentError } = await supabase
         .from("students")
         .insert({
@@ -92,6 +102,7 @@ export const useStudents = (classId?: string) => {
         teacher_id: user.id,
         class_id: targetClassId,
         student_id: student.id,
+        school_year_id: targetClass.school_year_id,
       });
 
       if (enrollmentError) {
@@ -262,14 +273,20 @@ export const useStudents = (classId?: string) => {
   };
 };
 
-export const useAllStudents = () =>
+export const useAllStudents = (schoolYearId?: string) =>
   useQuery({
-    queryKey: ["students", "all"],
+    queryKey: ["students", "all", schoolYearId ?? "any"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let request = supabase
         .from("students")
         .select("*, enrollments(id, class_id, student_id)")
         .order("last_name");
+
+      if (schoolYearId) {
+        request = request.eq("enrollments.school_year_id", schoolYearId);
+      }
+
+      const { data, error } = await request;
 
       if (error) {
         throw error;
@@ -279,16 +296,21 @@ export const useAllStudents = () =>
     },
   });
 
-export const useStudentById = (studentId?: string) =>
+export const useStudentById = (studentId?: string, schoolYearId?: string) =>
   useQuery({
-    queryKey: ["student", studentId],
+    queryKey: ["student", studentId, schoolYearId ?? "any"],
     enabled: Boolean(studentId),
     queryFn: async () => {
-      const { data, error } = await supabase
+      let request = supabase
         .from("students")
         .select("*, enrollments(id, class_id, student_id)")
-        .eq("id", studentId)
-        .single();
+        .eq("id", studentId);
+
+      if (schoolYearId) {
+        request = request.eq("enrollments.school_year_id", schoolYearId);
+      }
+
+      const { data, error } = await request.single();
 
       if (error) {
         throw error;
