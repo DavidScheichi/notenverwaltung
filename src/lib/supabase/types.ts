@@ -2,6 +2,15 @@ export type SubjectType = "normal" | "class_fund";
 export type GradingKind = "points" | "grade";
 export type AverageMode = "mean" | "weighted";
 export type FundEntryType = "deposit" | "withdrawal";
+
+export type SchoolYear = {
+  id: string;
+  teacher_id: string;
+  label: string;
+  is_current: boolean;
+  created_at: string;
+};
+
 export type AssessmentInputMode = "points" | "grade" | "either";
 export type AssessmentAggregationMode = "mean" | "sum" | "last_n" | "best_n";
 export type AssessmentResultStatus =
@@ -16,6 +25,8 @@ export interface SchoolClass {
   id: string;
   teacher_id: string;
   name: string;
+  school_year_id: string;
+  predecessor_class_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -35,6 +46,7 @@ export interface Enrollment {
   teacher_id: string;
   class_id: string;
   student_id: string;
+  school_year_id: string;
   created_at: string;
 }
 
