@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { StudentCreateModal } from "../components/ui/StudentCreateModal";
 import { EmptyState } from "../components/ui/EmptyState";
 import { ErrorState } from "../components/ui/ErrorState";
@@ -8,6 +8,8 @@ import { GradeBadge } from "../components/ui/GradeBadge";
 import { Menu } from "../components/ui/Menu";
 import { Modal } from "../components/ui/Modal";
 import { PageHeader } from "../components/ui/PageHeader";
+import { PromoteClassModal } from "../components/classes/PromoteClassModal";
+import { useSchoolYear } from "../components/layout/SchoolYearContext";
 import { useConfirm } from "../components/ui/useConfirm";
 import { useToast } from "../components/ui/ToastProvider";
 import { SubjectFormFields } from "../components/subjects/SubjectFormFields";
@@ -40,6 +42,7 @@ export const ClassDetailPage = () => {
   const toast = useToast();
   const { confirm, confirmDialog } = useConfirm();
   const { classId = "" } = useParams();
+  const navigate = useNavigate();
   const [tab, setTab] = useState<TabKey>("students");
 
   const classQuery = useClassById(classId);
@@ -78,6 +81,11 @@ export const ClassDetailPage = () => {
   });
   const [isFundModalOpen, setIsFundModalOpen] = useState(false);
   const [fundCreateError, setFundCreateError] = useState<string | null>(null);
+
+  const { schoolYears, currentSchoolYear } = useSchoolYear();
+  const [isPromoteModalOpen, setIsPromoteModalOpen] = useState(false);
+  const currentYearLabel =
+    schoolYears.find((year) => year.id === classQuery.data?.school_year_id)?.label ?? "";
 
   const currentTeacherId = classQuery.data?.teacher_id ?? "";
 
@@ -261,6 +269,17 @@ export const ClassDetailPage = () => {
           { label: "Fächer", value: subjectsQuery.data?.length ?? 0 },
           { label: "Kassenstand", value: formatCurrency(fundBalance) },
         ]}
+        actions={
+          classQuery.data && classQuery.data.school_year_id === currentSchoolYear?.id ? (
+            <button
+              type="button"
+              className="btn-secondary btn-sm"
+              onClick={() => setIsPromoteModalOpen(true)}
+            >
+              Ins neue Schuljahr übernehmen
+            </button>
+          ) : undefined
+        }
       />
 
       {classQuery.error ? <ErrorState message={classQuery.error.message} /> : null}
@@ -756,6 +775,21 @@ export const ClassDetailPage = () => {
           {fundCreateError ? <ErrorState message={fundCreateError} /> : null}
         </form>
       </Modal>
+
+      {classQuery.data ? (
+        <PromoteClassModal
+          isOpen={isPromoteModalOpen}
+          onClose={() => setIsPromoteModalOpen(false)}
+          schoolClass={classQuery.data}
+          currentLabel={currentYearLabel}
+          students={studentsQuery.data ?? []}
+          onPromoted={(newClassId) => {
+            setIsPromoteModalOpen(false);
+            toast.success("Klasse wurde ins neue Schuljahr übernommen.");
+            navigate(`/classes/${newClassId}`);
+          }}
+        />
+      ) : null}
 
       {confirmDialog}
     </div>
