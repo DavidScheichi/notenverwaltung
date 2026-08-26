@@ -70,7 +70,7 @@ export const SubjectFormFields = ({
           <Field
             label="Standardgewicht"
             htmlFor={`${idPrefix}-weight`}
-            hint="Vorbelegung für neue Leistungsnachweise. 1 = normale Gewichtung, 2 = zählt doppelt."
+            hint="Vorbelegung für neue Leistungsnachweise. Bestimmt, wie stark ein Leistungsnachweis in die Endnote einfließt (1 = normal, 2 = doppelt so stark) — für einzelne Leistungsnachweise beim Anlegen änderbar."
           >
             <input
               id={`${idPrefix}-weight`}

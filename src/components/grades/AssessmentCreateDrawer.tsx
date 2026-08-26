@@ -168,7 +168,7 @@ export const AssessmentCreateDrawer = ({
       <Field
         label="Gewicht"
         htmlFor="assessment-create-weight"
-        hint="1 = normale Gewichtung, 2 = zählt doppelt."
+        hint="Wie stark dieser Leistungsnachweis in die Endnote einfließt. 1 = normal, 2 = zählt doppelt so stark wie ein normaler Leistungsnachweis (z. B. Schularbeit stärker gewichten als Stundenwiederholung)."
       >
         <input
           id="assessment-create-weight"
