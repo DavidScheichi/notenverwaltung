@@ -4,9 +4,7 @@ import { PointsMappingEditor } from "../ui/PointsMappingEditor";
 export interface SubjectFormValues {
   class_id: string;
   name: string;
-  subject_type: string;
   grading_kind: string;
-  average_mode: string;
   default_weight: string;
   points_to_grade_raw: string;
 }
@@ -66,21 +64,6 @@ export const SubjectFormFields = ({
           />
         </Field>
 
-        <Field
-          label="Fachart"
-          htmlFor={`${idPrefix}-type`}
-          hint="Ein Klassenkasse-Fach dient der Geldverwaltung statt der Benotung."
-        >
-          <select
-            id={`${idPrefix}-type`}
-            className="field"
-            value={values.subject_type}
-            onChange={(event) => set("subject_type", event.target.value)}
-          >
-            <option value="normal">Normales Fach</option>
-            <option value="class_fund">Klassenkasse-Fach</option>
-          </select>
-        </Field>
       </fieldset>
 
       <fieldset className="space-y-4">
@@ -106,42 +89,30 @@ export const SubjectFormFields = ({
           </select>
         </Field>
 
-        <Field
-          label="Durchschnittsberechnung"
-          htmlFor={`${idPrefix}-average`}
-          hint={
-            values.average_mode === "weighted"
-              ? "Jeder Leistungsnachweis zählt entsprechend seinem Gewicht."
-              : "Alle Leistungsnachweise zählen gleich viel."
-          }
-        >
-          <select
-            id={`${idPrefix}-average`}
-            className="field"
-            value={values.average_mode}
-            onChange={(event) => set("average_mode", event.target.value)}
-          >
-            <option value="mean">Mittelwert</option>
-            <option value="weighted">Gewichteter Durchschnitt</option>
-          </select>
-        </Field>
-
-        <Field
-          label="Standardgewicht"
-          htmlFor={`${idPrefix}-weight`}
-          hint="Vorbelegung für neue Leistungsnachweise. 1 = normale Gewichtung, 2 = zählt doppelt."
-        >
-          <input
-            id={`${idPrefix}-weight`}
-            className="field"
-            type="number"
-            step="0.1"
-            min="0"
-            value={values.default_weight}
-            onChange={(event) => set("default_weight", event.target.value)}
-          />
-        </Field>
       </fieldset>
+
+      <details className="group rounded-xl border border-line">
+        <summary className="cursor-pointer select-none px-4 py-2.5 text-sm font-semibold text-ink-2 hover:text-ink">
+          Erweiterte Einstellungen
+        </summary>
+        <div className="border-t border-line p-4">
+          <Field
+            label="Standardgewicht"
+            htmlFor={`${idPrefix}-weight`}
+            hint="Vorbelegung für neue Leistungsnachweise. 1 = normale Gewichtung, 2 = zählt doppelt."
+          >
+            <input
+              id={`${idPrefix}-weight`}
+              className="field"
+              type="number"
+              step="0.1"
+              min="0"
+              value={values.default_weight}
+              onChange={(event) => set("default_weight", event.target.value)}
+            />
+          </Field>
+        </div>
+      </details>
 
       {values.grading_kind === "points" ? (
         <fieldset className="space-y-3">

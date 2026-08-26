@@ -2,9 +2,7 @@ import { z } from "zod";
 
 export const subjectSchema = z.object({
   name: z.string().min(2, "Mindestens 2 Zeichen.").max(80),
-  subject_type: z.enum(["normal", "class_fund"]),
   grading_kind: z.enum(["points", "grade"]),
-  average_mode: z.enum(["mean", "weighted"]),
   default_weight: z.coerce.number().min(0.1).max(20),
   points_to_grade_raw: z.string().optional(),
 });

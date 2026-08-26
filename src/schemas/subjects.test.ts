@@ -4,19 +4,12 @@ import { parsePointsMapping, subjectSchema } from "./subjects";
 describe("subjectSchema", () => {
   const validInput = {
     name: "Mathematik",
-    subject_type: "normal" as const,
     grading_kind: "points" as const,
-    average_mode: "mean" as const,
     default_weight: 1,
   };
 
   it("akzeptiert gültige Eingaben", () => {
     expect(subjectSchema.safeParse(validInput).success).toBe(true);
-  });
-
-  it("lehnt einen ungültigen subject_type ab", () => {
-    const result = subjectSchema.safeParse({ ...validInput, subject_type: "sonstiges" });
-    expect(result.success).toBe(false);
   });
 
   it("lehnt ein Gewicht außerhalb von 0.1 bis 20 ab", () => {

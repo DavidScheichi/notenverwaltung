@@ -42,9 +42,7 @@ export const SubjectsPage = () => {
   const [subjectForm, setSubjectForm] = useState<SubjectFormValues>({
     class_id: "",
     name: "",
-    subject_type: "normal",
     grading_kind: "grade",
-    average_mode: "mean",
     default_weight: "1",
     points_to_grade_raw: '{"90":1,"80":2,"65":3,"50":4,"0":5}',
   });
@@ -109,9 +107,7 @@ export const SubjectsPage = () => {
 
     const result = subjectSchema.safeParse({
       name: subjectForm.name,
-      subject_type: subjectForm.subject_type,
       grading_kind: subjectForm.grading_kind,
-      average_mode: subjectForm.average_mode,
       default_weight: subjectForm.default_weight,
       points_to_grade_raw: subjectForm.points_to_grade_raw,
     });
@@ -134,9 +130,9 @@ export const SubjectsPage = () => {
         teacher_id: user.id,
         class_id: subjectForm.class_id,
         name: result.data.name,
-        subject_type: result.data.subject_type,
+        subject_type: "normal",
         grading_kind: result.data.grading_kind,
-        average_mode: result.data.average_mode,
+        average_mode: "mean",
         default_weight: result.data.default_weight,
         points_to_grade:
           result.data.grading_kind === "points"
@@ -148,9 +144,7 @@ export const SubjectsPage = () => {
       setSubjectForm({
         class_id: "",
         name: "",
-        subject_type: "normal",
         grading_kind: "grade",
-        average_mode: "mean",
         default_weight: "1",
         points_to_grade_raw: '{"90":1,"80":2,"65":3,"50":4,"0":5}',
       });

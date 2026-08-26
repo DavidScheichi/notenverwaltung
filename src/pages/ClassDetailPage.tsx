@@ -67,9 +67,7 @@ export const ClassDetailPage = () => {
   const [subjectForm, setSubjectForm] = useState<SubjectFormValues>({
     class_id: classId,
     name: "",
-    subject_type: "normal",
     grading_kind: "grade",
-    average_mode: "mean",
     default_weight: "1",
     points_to_grade_raw: '{"90":1,"80":2,"65":3,"50":4,"0":5}',
   });
@@ -201,9 +199,9 @@ export const ClassDetailPage = () => {
         teacher_id: currentTeacherId,
         class_id: classId,
         name: result.data.name,
-        subject_type: result.data.subject_type,
+        subject_type: "normal",
         grading_kind: result.data.grading_kind,
-        average_mode: result.data.average_mode,
+        average_mode: "mean",
         default_weight: result.data.default_weight,
         points_to_grade:
           result.data.grading_kind === "points"
@@ -214,9 +212,7 @@ export const ClassDetailPage = () => {
       setSubjectForm({
         class_id: classId,
         name: "",
-        subject_type: "normal",
         grading_kind: "grade",
-        average_mode: "mean",
         default_weight: "1",
         points_to_grade_raw: '{"90":1,"80":2,"65":3,"50":4,"0":5}',
       });
