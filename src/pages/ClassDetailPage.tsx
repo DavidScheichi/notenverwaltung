@@ -23,7 +23,7 @@ import { useSubjects } from "../hooks/useSubjects";
 import { computeSubjectAverage } from "../lib/grades";
 import { formatCurrency, formatDate } from "../lib/utils";
 import { classFundEntrySchema } from "../schemas/classFund";
-import { parsePointsMapping, subjectSchema } from "../schemas/subjects";
+import { subjectSchema } from "../schemas/subjects";
 
 const tabs = [
   { key: "students", label: "Schüler" },
@@ -67,9 +67,7 @@ export const ClassDetailPage = () => {
   const [subjectForm, setSubjectForm] = useState<SubjectFormValues>({
     class_id: classId,
     name: "",
-    grading_kind: "grade",
     default_weight: "1",
-    points_to_grade_raw: '{"90":1,"80":2,"65":3,"50":4,"0":5}',
   });
   const [isSubjectModalOpen, setIsSubjectModalOpen] = useState(false);
   const [subjectCreateError, setSubjectCreateError] = useState<string | null>(null);
@@ -200,21 +198,16 @@ export const ClassDetailPage = () => {
         class_id: classId,
         name: result.data.name,
         subject_type: "normal",
-        grading_kind: result.data.grading_kind,
+        grading_kind: "grade",
         average_mode: "mean",
         default_weight: result.data.default_weight,
-        points_to_grade:
-          result.data.grading_kind === "points"
-            ? parsePointsMapping(result.data.points_to_grade_raw)
-            : null,
+        points_to_grade: null,
       });
       toast.success("Fach wurde erstellt.");
       setSubjectForm({
         class_id: classId,
         name: "",
-        grading_kind: "grade",
         default_weight: "1",
-        points_to_grade_raw: '{"90":1,"80":2,"65":3,"50":4,"0":5}',
       });
       setSubjectCreateError(null);
       setIsSubjectModalOpen(false);

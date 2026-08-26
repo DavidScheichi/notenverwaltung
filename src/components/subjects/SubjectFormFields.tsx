@@ -1,12 +1,9 @@
 import { Field } from "../ui/Field";
-import { PointsMappingEditor } from "../ui/PointsMappingEditor";
 
 export interface SubjectFormValues {
   class_id: string;
   name: string;
-  grading_kind: string;
   default_weight: string;
-  points_to_grade_raw: string;
 }
 
 interface SubjectFormFieldsProps {
@@ -63,32 +60,6 @@ export const SubjectFormFields = ({
             onChange={(event) => set("name", event.target.value)}
           />
         </Field>
-
-      </fieldset>
-
-      <fieldset className="space-y-4">
-        <legend className="text-sm font-semibold text-ink">Bewertung</legend>
-
-        <Field
-          label="Art der Bewertung"
-          htmlFor={`${idPrefix}-grading`}
-          hint={
-            values.grading_kind === "points"
-              ? "Du trägst Punkte ein, die Note wird über die Prozentstufen unten berechnet."
-              : "Du trägst die Note direkt ein, ohne Punkteumrechnung."
-          }
-        >
-          <select
-            id={`${idPrefix}-grading`}
-            className="field"
-            value={values.grading_kind}
-            onChange={(event) => set("grading_kind", event.target.value)}
-          >
-            <option value="grade">Direkte Note</option>
-            <option value="points">Punkte mit Umrechnung</option>
-          </select>
-        </Field>
-
       </fieldset>
 
       <details className="group rounded-xl border border-line">
@@ -113,20 +84,6 @@ export const SubjectFormFields = ({
           </Field>
         </div>
       </details>
-
-      {values.grading_kind === "points" ? (
-        <fieldset className="space-y-3">
-          <legend className="text-sm font-semibold text-ink">Punkte-Umrechnung</legend>
-          <p className="hint">
-            Lege fest, ab welchem Prozentsatz welche Note gilt. Die Stufen gelten für alle
-            Leistungsnachweise dieses Fachs.
-          </p>
-          <PointsMappingEditor
-            value={values.points_to_grade_raw}
-            onChange={(next) => set("points_to_grade_raw", next)}
-          />
-        </fieldset>
-      ) : null}
     </div>
   );
 };
