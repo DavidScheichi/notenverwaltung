@@ -43,6 +43,8 @@ export const calculateSubjectTotals = (
 ) => {
   let achievedWeighted = 0;
   let maxWeighted = 0;
+  let achievedRaw = 0;
+  let maxRaw = 0;
   const resultByDefinition = new Map(
     results.map((result) => [result.assessment_definition_id, result]),
   );
@@ -80,6 +82,8 @@ export const calculateSubjectTotals = (
 
     achievedWeighted += points * weight;
     maxWeighted += maxPoints * weight;
+    achievedRaw += points;
+    maxRaw += maxPoints;
   }
 
   const percent = maxWeighted > 0 ? (achievedWeighted / maxWeighted) * 100 : null;
@@ -87,6 +91,8 @@ export const calculateSubjectTotals = (
   return {
     achievedWeighted,
     maxWeighted,
+    achievedRaw,
+    maxRaw,
     percent,
   };
 };

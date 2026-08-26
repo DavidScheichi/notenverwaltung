@@ -124,8 +124,8 @@ const GradeRowBase = ({
         className="sticky z-10 border-b border-line bg-sunken px-4 py-2.5 tabular-nums"
         style={{ right: 224, minWidth: 170 }}
       >
-        {totals.maxWeighted > 0
-          ? `${totals.achievedWeighted.toFixed(1)} / ${totals.maxWeighted.toFixed(1)}`
+        {totals.maxRaw > 0
+          ? `${totals.achievedRaw.toFixed(1)} / ${totals.maxRaw.toFixed(1)}`
           : "—"}
       </td>
       <td

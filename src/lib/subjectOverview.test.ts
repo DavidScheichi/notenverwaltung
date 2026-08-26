@@ -115,6 +115,8 @@ describe("calculateSubjectTotals", () => {
     expect(calculateSubjectTotals(definitions, results)).toEqual({
       achievedWeighted: 0,
       maxWeighted: 0,
+      achievedRaw: 0,
+      maxRaw: 0,
       percent: null,
     });
   });
@@ -181,6 +183,25 @@ describe("calculateSubjectTotals", () => {
     expect(totals.achievedWeighted).toBe(45);
     expect(totals.maxWeighted).toBe(50);
     expect(totals.percent).toBe(90);
+  });
+
+  it("weist die unveränderten Punktesummen zusätzlich zu den gewichteten Summen aus", () => {
+    const definitions: AssessmentDefinition[] = [
+      { ...baseDefinition, id: "def-1", max_points: 10, weight_multiplier: 1 },
+      { ...baseDefinition, id: "def-2", max_points: 20, weight_multiplier: 2 },
+    ];
+    const results: AssessmentResult[] = [
+      { ...baseResult, id: "res-1", assessment_definition_id: "def-1", points: 5 },
+      { ...baseResult, id: "res-2", assessment_definition_id: "def-2", points: 20 },
+    ];
+
+    // Rohsumme (für die Anzeige): 5+20 von 10+20 — unabhängig vom Gewicht.
+    // Gewichtete Summe (nur für die Prozent-/Notenberechnung): 45 von 50.
+    const totals = calculateSubjectTotals(definitions, results);
+    expect(totals.achievedRaw).toBe(25);
+    expect(totals.maxRaw).toBe(30);
+    expect(totals.achievedWeighted).toBe(45);
+    expect(totals.maxWeighted).toBe(50);
   });
 });
 

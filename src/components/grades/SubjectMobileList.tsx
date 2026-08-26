@@ -213,8 +213,8 @@ export const SubjectMobileList = memo(({
                 <span className="text-ink-3">
                   Punkte{" "}
                   <span className="font-semibold tabular-nums text-ink">
-                    {row.totals.maxWeighted > 0
-                      ? `${row.totals.achievedWeighted.toFixed(1)} / ${row.totals.maxWeighted.toFixed(1)}`
+                    {row.totals.maxRaw > 0
+                      ? `${row.totals.achievedRaw.toFixed(1)} / ${row.totals.maxRaw.toFixed(1)}`
                       : "—"}
                   </span>
                 </span>
